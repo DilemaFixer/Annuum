@@ -38,12 +38,10 @@ typedef struct token {
     } value;
 } token;
 
-// Функции для создания токенов
 token *new_string_token(TokenType type, char* string, size_t line, size_t offset);
 token *new_number_token(TokenType type, double number, size_t line, size_t offset);
 token *new_token(TokenType type, size_t line, size_t offset);
 
-// Функции для парсинга
 arr_t *parse(char* code);
 void skip(char **str, size_t count);
 char *cnext(char *c);
