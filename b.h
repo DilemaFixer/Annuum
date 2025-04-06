@@ -14,18 +14,16 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h> /* For basename/dirname system functions */
+#include <libgen.h>
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
 
-// Forward declarations to avoid implicit declaration errors
 char* run_command(const char* cmd, ...);
 char* path_dirname(const char* path);
 char* strcat_new(const char* str1, const char* str2);
 
-// Color codes for logging
 #define RESET   "\x1b[0m"
 #define RED     "\x1b[31m"
 #define GREEN   "\x1b[32m"
@@ -35,7 +33,6 @@ char* strcat_new(const char* str1, const char* str2);
 #define CYAN    "\x1b[36m"
 #define WHITE   "\x1b[37m"
 
-// Logging macros
 #define LOG(level, color, fmt, ...) \
     do { \
         time_t t = time(NULL); \
@@ -46,10 +43,10 @@ char* strcat_new(const char* str1, const char* str2);
     } while(0)
 
 #define ERROR(fmt, ...)\
-        do { \
-            LOG("ERROR", RED, fmt, ##__VA_ARGS__); \
-            exit(1); \
-        } while(0)
+    do { \
+        LOG("ERROR", RED, fmt, ##__VA_ARGS__); \
+        exit(1); \
+    } while(0)
 
 #define WARN(fmt, ...) LOG("WARN", YELLOW, fmt, ##__VA_ARGS__)
 #define INFO(fmt, ...) LOG("INFO", GREEN, fmt, ##__VA_ARGS__)
@@ -61,13 +58,11 @@ char* strcat_new(const char* str1, const char* str2);
 char* change_extension(const char* file_path, const char* new_ext) {
     if (!file_path || !new_ext) {
         ERROR("Invalid parameters for changing extension");
-        return NULL;
     }
 
     char* base_path = strdup(file_path);
     if (!base_path) {
         ERROR("Failed to allocate memory for path");
-        return NULL;
     }
 
     char* last_dot = strrchr(base_path, '.');
@@ -80,7 +75,6 @@ char* change_extension(const char* file_path, const char* new_ext) {
 
     if (!new_path) {
         ERROR("Failed to allocate memory for new path");
-        return NULL;
     }
 
     char* result = strcat_new(new_path, new_ext);
@@ -89,7 +83,6 @@ char* change_extension(const char* file_path, const char* new_ext) {
     return result;
 }
 
-// Command execution
 char* joinstr(int count, ...) {
     va_list args;
     va_start(args, count);
@@ -108,7 +101,7 @@ char* joinstr(int count, ...) {
     char* result = malloc(total_len + 1);
     if (!result) {
         va_end(args);
-        return NULL;
+        ERROR("Failed to allocate memory for joined string");
     }
 
     char* current = result;
@@ -142,7 +135,6 @@ char* joinstr(int count, ...) {
     } \
 } while(0)
 
-// Unix commands
 #define MKDIR_CMD "mkdir -p"
 #define RM_CMD "rm"
 #define RMDIR_CMD "rm -rf"
@@ -159,23 +151,22 @@ char* joinstr(int count, ...) {
 #define TAR_CMD "tar"
 #define WGET_CMD "wget"
 
-// File system functions
 char* exec_path() {
     char* path = malloc(PATH_MAX);
-    if (!path) return NULL;
+    if (!path) ERROR("Failed to allocate memory for executable path");
 
 #ifdef __linux__
     ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
     if (count == -1) {
         free(path);
-        return NULL;
+        ERROR("Failed to get executable path on Linux");
     }
     path[count] = '\0';
 #elif defined(__APPLE__)
     uint32_t size = PATH_MAX;
     if (_NSGetExecutablePath(path, &size) != 0) {
         free(path);
-        return NULL;
+        ERROR("Failed to get executable path on macOS");
     }
     char* real_path = realpath(path, NULL);
     if (real_path) {
@@ -184,7 +175,7 @@ char* exec_path() {
     }
 #else
     free(path);
-    return NULL;
+    ERROR("Unsupported platform for executable path");
 #endif
 
     return path;
@@ -192,13 +183,12 @@ char* exec_path() {
 
 char* exec_dir() {
     char* path = exec_path();
-    if (!path) return NULL;
+    if (!path) ERROR("Failed to get executable path");
 
-    // Using our own dirname function to avoid conflicts
     char* dir = path_dirname(path);
     if (!dir) {
         free(path);
-        return NULL;
+        ERROR("Failed to get directory from executable path");
     }
 
     free(path);
@@ -209,13 +199,10 @@ char* pwd() {
     char* path = malloc(PATH_MAX);
     if (!path) {
         ERROR("Failed to allocate memory for current directory");
-        return NULL;
     }
 
     if (getcwd(path, PATH_MAX) == NULL) {
         ERROR("Failed to get current directory");
-        free(path);
-        return NULL;
     }
 
     return path;
@@ -229,7 +216,6 @@ bool cd(const char* path) {
 
     if (chdir(path) != 0) {
         ERROR("Failed to change directory to %s", path);
-        return false;
     }
 
     VERBOSE("Changed directory to %s", path);
@@ -284,13 +270,11 @@ bool make_dir(const char* path, mode_t mode) {
         return true;
     }
 
-    // Try direct creation first
     if (mkdir(path, mode) == 0) {
         VERBOSE("Created directory %s", path);
         return true;
     }
 
-    // Fallback to mkdir -p
     char cmd[PATH_MAX + 20];
     snprintf(cmd, sizeof(cmd), "%s %s", MKDIR_CMD, path);
     if (system(cmd) == 0) {
@@ -313,7 +297,6 @@ bool touch_file(const char* path) {
         return true;
     }
 
-    // Try direct creation first
     int fd = open(path, O_CREAT|O_WRONLY, 0644);
     if (fd >= 0) {
         close(fd);
@@ -321,7 +304,6 @@ bool touch_file(const char* path) {
         return true;
     }
 
-    // Fallback to touch command
     char cmd[PATH_MAX + 10];
     snprintf(cmd, sizeof(cmd), "%s %s", TOUCH_CMD, path);
     if (system(cmd) == 0) {
@@ -351,7 +333,6 @@ bool touch_with_ext(const char* name, const char* ext) {
 
         if (!full_name) {
             ERROR("Failed to allocate memory for filename");
-            return false;
         }
 
         strcpy(full_name, name);
@@ -375,13 +356,11 @@ bool remove_file(const char* path) {
         return true;
     }
 
-    // Try direct removal first
     if (unlink(path) == 0) {
         VERBOSE("Deleted file %s", path);
         return true;
     }
 
-    // Fallback to rm command
     char cmd[PATH_MAX + 5];
     snprintf(cmd, sizeof(cmd), "%s %s", RM_CMD, path);
     if (system(cmd) == 0) {
@@ -426,18 +405,15 @@ bool copy_file(const char* src, const char* dst) {
         return false;
     }
 
-    // Try direct copy first
     FILE *source = fopen(src, "rb");
     if (!source) {
         ERROR("Cannot open source file %s", src);
-        return false;
     }
 
     FILE *dest = fopen(dst, "wb");
     if (!dest) {
         fclose(source);
         ERROR("Cannot open destination file %s", dst);
-        return false;
     }
 
     char buffer[8192];
@@ -448,7 +424,6 @@ bool copy_file(const char* src, const char* dst) {
             fclose(source);
             fclose(dest);
             ERROR("Write error");
-            return false;
         }
     }
 
@@ -457,7 +432,6 @@ bool copy_file(const char* src, const char* dst) {
 
     if (ferror(source)) {
         ERROR("Read error");
-        return false;
     }
 
     VERBOSE("Copied %s to %s", src, dst);
@@ -475,18 +449,15 @@ bool move_file(const char* src, const char* dst) {
         return false;
     }
 
-    // Try direct rename first
     if (rename(src, dst) == 0) {
         VERBOSE("Moved %s to %s", src, dst);
         return true;
     }
 
-    // If rename fails (e.g., across filesystems), try copy and delete
     if (copy_file(src, dst)) {
         return remove_file(src);
     }
 
-    // Fallback to mv command
     char cmd[2 * PATH_MAX + 10];
     snprintf(cmd, sizeof(cmd), "%s %s %s", MV_CMD, src, dst);
     if (system(cmd) == 0) {
@@ -517,7 +488,6 @@ bool write_to_file(const char* path, const char* content) {
     FILE* file = fopen(path, "w");
     if (!file) {
         ERROR("Failed to open file %s for writing", path);
-        return false;
     }
 
     size_t content_len = strlen(content);
@@ -526,7 +496,6 @@ bool write_to_file(const char* path, const char* content) {
 
     if (written != content_len) {
         ERROR("Failed to write all content to file %s", path);
-        return false;
     }
 
     VERBOSE("Wrote %zu bytes to file %s", written, path);
@@ -536,13 +505,12 @@ bool write_to_file(const char* path, const char* content) {
 char* read_from_file(const char* path) {
     if (!path) {
         WARN("Invalid file path");
-        return NULL;
+        ERROR("Cannot read from NULL path");
     }
 
     FILE* file = fopen(path, "r");
     if (!file) {
         ERROR("Failed to open file %s for reading", path);
-        return NULL;
     }
 
     fseek(file, 0, SEEK_END);
@@ -554,14 +522,13 @@ char* read_from_file(const char* path) {
         fclose(file);
         char* empty_str = malloc(1);
         if (empty_str) empty_str[0] = '\0';
+        else ERROR("Failed to allocate memory for empty string");
         return empty_str;
     }
 
     char* content = malloc(file_size + 1);
     if (!content) {
         ERROR("Failed to allocate memory for file content");
-        fclose(file);
-        return NULL;
     }
 
     size_t read_size = fread(content, 1, file_size, file);
@@ -569,8 +536,6 @@ char* read_from_file(const char* path) {
 
     if (read_size != file_size) {
         ERROR("Failed to read entire file %s", path);
-        free(content);
-        return NULL;
     }
 
     content[file_size] = '\0';
@@ -599,13 +564,11 @@ bool change_mode(const char* path, mode_t mode) {
         return false;
     }
 
-    // Try direct chmod first
     if (chmod(path, mode) == 0) {
         VERBOSE("Changed mode of %s to %o", path, mode);
         return true;
     }
 
-    // Fallback to chmod command
     char cmd[PATH_MAX + 20];
     char mode_str[5];
     snprintf(mode_str, sizeof(mode_str), "%o", mode);
@@ -625,19 +588,16 @@ bool make_symlink(const char* target, const char* link_path) {
         return false;
     }
 
-    // Try direct symlink first
     if (symlink(target, link_path) == 0) {
         VERBOSE("Created symlink from %s to %s", link_path, target);
         return true;
     }
 
-    // Fallback to ln command
     char cmd[2 * PATH_MAX + 10];
     snprintf(cmd, sizeof(cmd), "%s %s %s", LN_CMD, target, link_path);
     if (system(cmd) == 0) {
         VERBOSE("Created symlink from %s to %s with %s", link_path, target, LN_CMD);
 
-        // Check if symlink exists and points to the correct target
         char buf[PATH_MAX];
         ssize_t len = readlink(link_path, buf, sizeof(buf) - 1);
         if (len != -1) {
@@ -653,10 +613,9 @@ bool make_symlink(const char* target, const char* link_path) {
 char* find_command(const char* cmd) {
     if (!cmd) {
         WARN("Invalid command name");
-        return NULL;
+        ERROR("Cannot find NULL command");
     }
 
-    // Check if the command is an absolute path or in the current directory
     if (strchr(cmd, '/')) {
         if (is_exec(cmd)) {
             return strdup(cmd);
@@ -670,14 +629,12 @@ char* find_command(const char* cmd) {
     FILE* pipe = popen(cmd_buf, "r");
     if (!pipe) {
         ERROR("Failed to execute which command");
-        return NULL;
     }
 
     char buffer[PATH_MAX];
     char* result = NULL;
 
     if (fgets(buffer, sizeof(buffer), pipe) != NULL) {
-        // Remove trailing newline
         size_t len = strlen(buffer);
         if (len > 0 && buffer[len - 1] == '\n') {
             buffer[len - 1] = '\0';
@@ -699,7 +656,6 @@ char* timestamp() {
     char* ts = malloc(20);
     if (!ts) {
         ERROR("Failed to allocate memory for timestamp");
-        return NULL;
     }
 
     strftime(ts, 20, "%Y-%m-%d %H:%M:%S", tm_info);
@@ -713,7 +669,6 @@ char* datestamp() {
     char* date = malloc(11);
     if (!date) {
         ERROR("Failed to allocate memory for date");
-        return NULL;
     }
 
     strftime(date, 11, "%Y-%m-%d", tm_info);
@@ -730,7 +685,6 @@ char* strcat_new(const char* str1, const char* str2) {
     char* result = malloc(len1 + len2 + 1);
     if (!result) {
         ERROR("Failed to allocate memory for string concatenation");
-        return NULL;
     }
 
     strcpy(result, str1);
@@ -738,10 +692,32 @@ char* strcat_new(const char* str1, const char* str2) {
     return result;
 }
 
+char* strcat_with_space(const char* str1, const char* str2) {
+    if (!str1) str1 = "";
+    if (!str2) str2 = "";
+
+    size_t len1 = strlen(str1);
+    size_t len2 = strlen(str2);
+
+    char* result = malloc(len1 + 1 + len2 + 1);
+    if (!result) {
+        ERROR("Failed to allocate memory for string concatenation with space");
+    }
+
+    strcpy(result, str1);
+
+    if (len1 > 0 && len2 > 0) {
+        strcat(result, " ");
+    }
+
+    strcat(result, str2);
+    return result;
+}
+
 char* strreplace(const char* str, const char* old_sub, const char* new_sub) {
     if (!str || !old_sub || !new_sub) {
         WARN("Invalid parameters");
-        return NULL;
+        ERROR("Invalid parameters for string replacement");
     }
 
     size_t old_len = strlen(old_sub);
@@ -750,7 +726,6 @@ char* strreplace(const char* str, const char* old_sub, const char* new_sub) {
     size_t new_len = strlen(new_sub);
     size_t count = 0;
 
-    // Count occurrences of old_sub in str
     const char* tmp = str;
     while ((tmp = strstr(tmp, old_sub)) != NULL) {
         count++;
@@ -765,7 +740,6 @@ char* strreplace(const char* str, const char* old_sub, const char* new_sub) {
     char* result = malloc(result_len + 1);
     if (!result) {
         ERROR("Failed to allocate memory for string replacement");
-        return NULL;
     }
 
     char* dest = result;
@@ -802,7 +776,6 @@ char* pathjoin(const char* path1, const char* path2) {
 
     if (!result) {
         ERROR("Failed to allocate memory for path joining");
-        return NULL;
     }
 
     strcpy(result, path1);
@@ -819,10 +792,9 @@ char* pathjoin(const char* path1, const char* path2) {
 char* path_basename(const char* path) {
     if (!path) {
         WARN("Invalid path");
-        return NULL;
+        ERROR("Invalid path for basename");
     }
 
-    // Use our own implementation to avoid system function conflicts
     const char* last_slash = strrchr(path, '/');
 
     if (!last_slash) {
@@ -835,14 +807,12 @@ char* path_basename(const char* path) {
 char* path_dirname(const char* path) {
     if (!path) {
         WARN("Invalid path");
-        return NULL;
+        ERROR("Invalid path for dirname");
     }
 
-    // Use our own implementation to avoid system function conflicts
     char* path_copy = strdup(path);
     if (!path_copy) {
         ERROR("Failed to allocate memory");
-        return NULL;
     }
 
     char* last_slash = strrchr(path_copy, '/');
@@ -865,411 +835,466 @@ char* path_dirname(const char* path) {
 char* extname(const char* path) {
     if (!path) {
         WARN("Invalid path");
-        return NULL;
+        ERROR("Invalid path for extname");
     }
 
     char* base = path_basename(path);
-    if (!base) return NULL;
+    if (!base) ERROR("Failed to get basename for extname");
 
     char* dot = strrchr(base, '.');
     char* ext;
 
     if (!dot || dot == base) {
+            free(base);
+            return strdup("");
+        }
+
+        ext = strdup(dot + 1);
         free(base);
-        return strdup("");
+        return ext;
     }
 
-    ext = strdup(dot + 1);
-    free(base);
-    return ext;
-}
+    char* run_command(const char* cmd, ...) {
+        if (!cmd) {
+            WARN("Invalid command");
+            ERROR("Cannot run NULL command");
+        }
 
-char* run_command(const char* cmd, ...) {
-    if (!cmd) {
-        WARN("Invalid command");
-        return NULL;
-    }
+        va_list args;
+        va_start(args, cmd);
 
-    va_list args;
-    va_start(args, cmd);
+        va_list args_copy;
+        va_copy(args_copy, args);
+        int arg_count = 0;
+        while (va_arg(args_copy, const char*) != NULL) {
+            arg_count++;
+        }
+        va_end(args_copy);
 
-    // Count the number of arguments
-    va_list args_copy;
-    va_copy(args_copy, args);
-    int arg_count = 0;
-    while (va_arg(args_copy, const char*) != NULL) {
-        arg_count++;
-    }
-    va_end(args_copy);
+        size_t cmd_len = strlen(cmd);
+        size_t total_len = cmd_len;
+        char** arg_array = malloc((arg_count + 1) * sizeof(char*));
 
-    // Build full command with arguments
-    size_t cmd_len = strlen(cmd);
-    size_t total_len = cmd_len;
-    char** arg_array = malloc((arg_count + 1) * sizeof(char*));
+        if (!arg_array) {
+            ERROR("Failed to allocate memory for command arguments");
+        }
 
-    if (!arg_array) {
-        ERROR("Failed to allocate memory for command arguments");
+        arg_array[0] = (char*)cmd;
+
+        for (int i = 0; i < arg_count; i++) {
+            const char* arg = va_arg(args, const char*);
+            arg_array[i+1] = (char*)arg;
+            total_len += strlen(arg) + 1;
+        }
+
         va_end(args);
-        return NULL;
-    }
 
-    arg_array[0] = (char*)cmd;
+        char* full_cmd = malloc(total_len + 1);
+        if (!full_cmd) {
+            free(arg_array);
+            ERROR("Failed to allocate memory for command");
+        }
 
-    for (int i = 0; i < arg_count; i++) {
-        const char* arg = va_arg(args, const char*);
-        arg_array[i+1] = (char*)arg;
-        total_len += strlen(arg) + 1; // +1 for space
-    }
+        strcpy(full_cmd, cmd);
+        size_t pos = cmd_len;
 
-    va_end(args);
+        for (int i = 1; i <= arg_count; i++) {
+            full_cmd[pos++] = ' ';
+            strcpy(full_cmd + pos, arg_array[i]);
+            pos += strlen(arg_array[i]);
+        }
 
-    char* full_cmd = malloc(total_len + 1);
-    if (!full_cmd) {
-        ERROR("Failed to allocate memory for command");
         free(arg_array);
-        return NULL;
-    }
 
-    strcpy(full_cmd, cmd);
-    size_t pos = cmd_len;
+        FILE* pipe = popen(full_cmd, "r");
+        free(full_cmd);
 
-    for (int i = 1; i <= arg_count; i++) {
-        full_cmd[pos++] = ' ';
-        strcpy(full_cmd + pos, arg_array[i]);
-        pos += strlen(arg_array[i]);
-    }
+        if (!pipe) {
+            ERROR("Failed to execute command");
+        }
 
-    free(arg_array);
+        char buffer[128];
+        char* result = NULL;
+        size_t total_size = 0;
 
-    FILE* pipe = popen(full_cmd, "r");
-    free(full_cmd);
+        while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
+            size_t buffer_len = strlen(buffer);
 
-    if (!pipe) {
-        ERROR("Failed to execute command");
-        return NULL;
-    }
+            if (!result) {
+                result = malloc(buffer_len + 1);
+                if (!result) {
+                    pclose(pipe);
+                    ERROR("Failed to allocate memory");
+                }
+                strcpy(result, buffer);
+                total_size = buffer_len;
+            } else {
+                char* new_result = realloc(result, total_size + buffer_len + 1);
+                if (!new_result) {
+                    free(result);
+                    pclose(pipe);
+                    ERROR("Failed to reallocate memory");
+                }
+                result = new_result;
+                strcpy(result + total_size, buffer);
+                total_size += buffer_len;
+            }
+        }
 
-    char buffer[128];
-    char* result = NULL;
-    size_t total_size = 0;
-
-    while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
-        size_t buffer_len = strlen(buffer);
+        int status = pclose(pipe);
+        if (status != 0) {
+            WARN("Command exited with status %d", status);
+        }
 
         if (!result) {
-            result = malloc(buffer_len + 1);
+            result = malloc(1);
             if (!result) {
-                ERROR("Failed to allocate memory");
-                pclose(pipe);
-                return NULL;
+                ERROR("Failed to allocate memory for empty result");
             }
-            strcpy(result, buffer);
-            total_size = buffer_len;
+            result[0] = '\0';
+        }
+
+        return result;
+    }
+
+    char* grep(const char* pattern, const char* file) {
+        if (!pattern || !file) {
+            WARN("Invalid parameters");
+            ERROR("Invalid parameters for grep");
+        }
+
+        char cmd[PATH_MAX + 100];
+        snprintf(cmd, sizeof(cmd), "%s %s %s", GREP_CMD, pattern, file);
+        system(cmd);
+
+        return run_command(GREP_CMD, pattern, file, NULL);
+    }
+
+    char* find_files(const char* dir, const char* pattern) {
+        if (!dir || !pattern) {
+            WARN("Invalid parameters");
+            ERROR("Invalid parameters for find_files");
+        }
+
+        return run_command("find", dir, "-name", pattern, NULL);
+    }
+
+    bool tar_create(const char* archive, const char* files) {
+        if (!archive || !files) {
+            WARN("Invalid parameters");
+            ERROR("Invalid parameters for tar_create");
+        }
+
+        char cmd[PATH_MAX * 2 + 20];
+        snprintf(cmd, sizeof(cmd), "%s -czf %s %s", TAR_CMD, archive, files);
+        if (system(cmd) == 0) {
+            VERBOSE("Created archive %s from %s", archive, files);
+            return file_exists(archive);
+        }
+
+        ERROR("Failed to create archive %s", archive);
+        return false;
+    }
+
+    bool tar_extract(const char* archive, const char* dest) {
+        if (!archive || !file_exists(archive)) {
+            WARN("Archive doesn't exist: %s", archive ? archive : "(null)");
+            ERROR("Invalid archive for extraction");
+        }
+
+        if (dest && !dir_exists(dest)) {
+            make_dir(dest, 0755);
+        }
+
+        char cmd[PATH_MAX * 2 + 20];
+
+        if (dest) {
+            char* old_dir = pwd();
+            cd(dest);
+            snprintf(cmd, sizeof(cmd), "%s -xzf %s", TAR_CMD, archive);
+            int result = system(cmd);
+            cd(old_dir);
+            free(old_dir);
+
+            if (result == 0) {
+                VERBOSE("Extracted archive %s to %s", archive, dest);
+                return true;
+            }
         } else {
-            char* new_result = realloc(result, total_size + buffer_len + 1);
-            if (!new_result) {
-                ERROR("Failed to reallocate memory");
-                free(result);
-                pclose(pipe);
-                return NULL;
+            snprintf(cmd, sizeof(cmd), "%s -xzf %s", TAR_CMD, archive);
+            if (system(cmd) == 0) {
+                VERBOSE("Extracted archive %s", archive);
+                return true;
             }
-            result = new_result;
-            strcpy(result + total_size, buffer);
-            total_size += buffer_len;
         }
-    }
 
-    int status = pclose(pipe);
-    if (status != 0) {
-        WARN("Command exited with status %d", status);
-    }
-
-    if (!result) {
-        result = malloc(1);
-        if (result) result[0] = '\0';
-    }
-
-    return result;
-}
-
-char* grep(const char* pattern, const char* file) {
-    if (!pattern || !file) {
-        WARN("Invalid parameters");
-        return NULL;
-    }
-
-    char cmd[PATH_MAX + 100];
-    snprintf(cmd, sizeof(cmd), "%s %s %s", GREP_CMD, pattern, file);
-    system(cmd);
-
-    return run_command(GREP_CMD, pattern, file, NULL);
-}
-
-char* find_files(const char* dir, const char* pattern) {
-    if (!dir || !pattern) {
-        WARN("Invalid parameters");
-        return NULL;
-    }
-
-    return run_command("find", dir, "-name", pattern, NULL);
-}
-
-bool tar_create(const char* archive, const char* files) {
-    if (!archive || !files) {
-        WARN("Invalid parameters");
+        ERROR("Failed to extract archive %s", archive);
         return false;
     }
 
-    char cmd[PATH_MAX * 2 + 20];
-    snprintf(cmd, sizeof(cmd), "%s -czf %s %s", TAR_CMD, archive, files);
-    if (system(cmd) == 0) {
-        VERBOSE("Created archive %s from %s", archive, files);
-        return file_exists(archive);
-    }
+    bool wget_file(const char* url, const char* output) {
+        if (!url) {
+            WARN("Invalid URL");
+            ERROR("Invalid URL for download");
+        }
 
-    ERROR("Failed to create archive %s", archive);
-    return false;
-}
+        char cmd[PATH_MAX + 1024];
 
-bool tar_extract(const char* archive, const char* dest) {
-    if (!archive || !file_exists(archive)) {
-        WARN("Archive doesn't exist: %s", archive ? archive : "(null)");
+        if (output) {
+            snprintf(cmd, sizeof(cmd), "%s -O %s %s", WGET_CMD, output, url);
+            if (system(cmd) == 0) {
+                VERBOSE("Downloaded %s to %s", url, output);
+                return file_exists(output);
+            }
+        } else {
+            snprintf(cmd, sizeof(cmd), "%s %s", WGET_CMD, url);
+            if (system(cmd) == 0) {
+                VERBOSE("Downloaded %s", url);
+                return true;
+            }
+        }
+
+        ERROR("Failed to download %s", url);
         return false;
     }
 
-    if (dest && !dir_exists(dest)) {
-        make_dir(dest, 0755);
-    }
-
-    char cmd[PATH_MAX * 2 + 20];
-
-    if (dest) {
-        char* old_dir = pwd();
-        cd(dest);
-        snprintf(cmd, sizeof(cmd), "%s -xzf %s", TAR_CMD, archive);
-        int result = system(cmd);
-        cd(old_dir);
-        free(old_dir);
-
-        if (result == 0) {
-            VERBOSE("Extracted archive %s to %s", archive, dest);
-            return true;
+    char* tmp_file() {
+        char* template = strdup("/tmp/tmp.XXXXXX");
+        if (!template) {
+            ERROR("Failed to allocate memory");
         }
-    } else {
-        snprintf(cmd, sizeof(cmd), "%s -xzf %s", TAR_CMD, archive);
-        if (system(cmd) == 0) {
-            VERBOSE("Extracted archive %s", archive);
-            return true;
+
+        int fd = mkstemp(template);
+        if (fd == -1) {
+            ERROR("Failed to create temporary file");
         }
+
+        close(fd);
+        return template;
     }
 
-    ERROR("Failed to extract archive %s", archive);
-    return false;
-}
-
-bool wget_file(const char* url, const char* output) {
-    if (!url) {
-        WARN("Invalid URL");
-        return false;
-    }
-
-    char cmd[PATH_MAX + 1024];
-
-    if (output) {
-        snprintf(cmd, sizeof(cmd), "%s -O %s %s", WGET_CMD, output, url);
-        if (system(cmd) == 0) {
-            VERBOSE("Downloaded %s to %s", url, output);
-            return file_exists(output);
+    char* tmp_dir() {
+        char* template = strdup("/tmp/tmp.XXXXXX");
+        if (!template) {
+            ERROR("Failed to allocate memory");
         }
-    } else {
-        snprintf(cmd, sizeof(cmd), "%s %s", WGET_CMD, url);
-        if (system(cmd) == 0) {
-            VERBOSE("Downloaded %s", url);
-            return true;
+
+        char* result = mkdtemp(template);
+        if (!result) {
+            ERROR("Failed to create temporary directory");
         }
+
+        return template;
     }
 
-    ERROR("Failed to download %s", url);
-    return false;
-}
+    typedef struct {
+        char** items;
+        int count;
+        int capacity;
+    } Array;
 
-char* tmp_file() {
-    char* template = strdup("/tmp/tmp.XXXXXX");
-    if (!template) {
-        ERROR("Failed to allocate memory");
-        return NULL;
+    Array* array_new(int initial_capacity) {
+        Array* arr = malloc(sizeof(Array));
+        if (!arr) {
+            ERROR("Failed to allocate memory for array");
+        }
+
+        arr->items = malloc(initial_capacity * sizeof(char*));
+        if (!arr->items) {
+            free(arr);
+            ERROR("Failed to allocate memory for array items");
+        }
+
+        arr->count = 0;
+        arr->capacity = initial_capacity;
+        return arr;
     }
 
-    int fd = mkstemp(template);
-    if (fd == -1) {
-        ERROR("Failed to create temporary file");
-        free(template);
-        return NULL;
+    void array_add(Array* arr, const char* item) {
+        if (!arr || !item) return;
+
+        if (arr->count >= arr->capacity) {
+            int new_capacity = arr->capacity * 2;
+            char** new_items = realloc(arr->items, new_capacity * sizeof(char*));
+
+            if (!new_items) {
+                ERROR("Failed to resize array");
+            }
+
+            arr->items = new_items;
+            arr->capacity = new_capacity;
+        }
+
+        arr->items[arr->count] = strdup(item);
+        if (!arr->items[arr->count]) {
+            ERROR("Failed to duplicate string");
+        }
+
+        arr->count++;
     }
 
-    close(fd);
-    return template;
-}
+    void array_free(Array* arr) {
+        if (!arr) return;
 
-char* tmp_dir() {
-    char* template = strdup("/tmp/tmp.XXXXXX");
-    if (!template) {
-        ERROR("Failed to allocate memory");
-        return NULL;
-    }
+        for (int i = 0; i < arr->count; i++) {
+            free(arr->items[i]);
+        }
 
-    char* result = mkdtemp(template);
-    if (!result) {
-        ERROR("Failed to create temporary directory");
-        free(template);
-        return NULL;
-    }
-
-    return template;
-}
-
-typedef struct {
-    char** items;
-    int count;
-    int capacity;
-} Array;
-
-Array* array_new(int initial_capacity) {
-    Array* arr = malloc(sizeof(Array));
-    if (!arr) {
-        ERROR("Failed to allocate memory for array");
-        return NULL;
-    }
-
-    arr->items = malloc(initial_capacity * sizeof(char*));
-    if (!arr->items) {
-        ERROR("Failed to allocate memory for array items");
+        free(arr->items);
         free(arr);
-        return NULL;
     }
 
-    arr->count = 0;
-    arr->capacity = initial_capacity;
-    return arr;
-}
+    void shift(int* argc, char*** argv) {
+        if (!argc || !argv || *argc <= 0) return;
 
-void array_add(Array* arr, const char* item) {
-    if (!arr || !item) return;
+        (*argc)--;
+        (*argv)++;
+    }
 
-    if (arr->count >= arr->capacity) {
-        int new_capacity = arr->capacity * 2;
-        char** new_items = realloc(arr->items, new_capacity * sizeof(char*));
+    char* get_arg(int argc, char** argv, int index) {
+        if (index < 0 || index >= argc) return NULL;
+        return argv[index];
+    }
 
-        if (!new_items) {
-            ERROR("Failed to resize array");
-            return;
+    bool has_arg(int argc, char** argv, const char* arg) {
+        if (!arg) return false;
+
+        for (int i = 0; i < argc; i++) {
+            if (argv[i] && strcmp(argv[i], arg) == 0)
+                return true;
         }
 
-        arr->items = new_items;
-        arr->capacity = new_capacity;
+        return false;
     }
 
-    arr->items[arr->count] = strdup(item);
-    if (!arr->items[arr->count]) {
-        ERROR("Failed to duplicate string");
-        return;
-    }
+    char* get_arg_value(int argc, char** argv, const char* arg) {
+        if (!arg) return NULL;
 
-    arr->count++;
-}
-
-void array_free(Array* arr) {
-    if (!arr) return;
-
-    for (int i = 0; i < arr->count; i++) {
-        free(arr->items[i]);
-    }
-
-    free(arr->items);
-    free(arr);
-}
-
-// Command line argument handling
-void shift(int* argc, char*** argv) {
-    if (!argc || !argv || *argc <= 0) return;
-
-    (*argc)--;
-    (*argv)++;
-}
-
-char* get_arg(int argc, char** argv, int index) {
-    if (index < 0 || index >= argc) return NULL;
-    return argv[index];
-}
-
-bool has_arg(int argc, char** argv, const char* arg) {
-    if (!arg) return false;
-
-    for (int i = 0; i < argc; i++) {
-        if (argv[i] && strcmp(argv[i], arg) == 0)
-            return true;
-    }
-
-    return false;
-}
-
-char* get_arg_value(int argc, char** argv, const char* arg) {
-    if (!arg) return NULL;
-
-    for (int i = 0; i < argc - 1; i++) {
-        if (argv[i] && strcmp(argv[i], arg) == 0)
-            return argv[i+1];
-    }
-
-    return NULL;
-}
-
-Array* find_all_files(const char* dir, const char* ext) {
-    DIR* d = opendir(dir);
-    if (!d) {
-        ERROR("Cannot open directory: %s", dir);
-        return NULL;
-    }
-
-    Array* result = array_new(10);
-    if (!result) {
-        closedir(d);
-        return NULL;
-    }
-
-    struct dirent* entry;
-    while ((entry = readdir(d)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
+        for (int i = 0; i < argc - 1; i++) {
+            if (argv[i] && strcmp(argv[i], arg) == 0)
+                return argv[i+1];
         }
 
-        char* path = pathjoin(dir, entry->d_name);
-        if (!path) continue;
+        return NULL;
+    }
 
-        struct stat st;
-        if (stat(path, &st) == 0) {
-            if (S_ISDIR(st.st_mode)) {
-                Array* subdir_files = find_all_files(path, ext);
-                if (subdir_files) {
-                    for (int i = 0; i < subdir_files->count; i++) {
-                        array_add(result, subdir_files->items[i]);
+    Array* find_all_files(const char* dir, const char* ext) {
+        DIR* d = opendir(dir);
+        if (!d) {
+            ERROR("Cannot open directory: %s", dir);
+        }
+
+        Array* result = array_new(10);
+        if (!result) {
+            closedir(d);
+            ERROR("Failed to create array for files");
+        }
+
+        struct dirent* entry;
+        while ((entry = readdir(d)) != NULL) {
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                continue;
+            }
+
+            char* path = pathjoin(dir, entry->d_name);
+            if (!path) continue;
+
+            struct stat st;
+            if (stat(path, &st) == 0) {
+                if (S_ISDIR(st.st_mode)) {
+                    Array* subdir_files = find_all_files(path, ext);
+                    if (subdir_files) {
+                        for (int i = 0; i < subdir_files->count; i++) {
+                            array_add(result, subdir_files->items[i]);
+                        }
+                        array_free(subdir_files);
                     }
-                    array_free(subdir_files);
+                } else if (S_ISREG(st.st_mode)) {
+                    char* file_ext = extname(path);
+                    if (file_ext && strcmp(file_ext, ext) == 0) {
+                        array_add(result, path);
+                        VERBOSE("Found file: %s", path);
+                    }
+                    free(file_ext);
                 }
-            } else if (S_ISREG(st.st_mode)) {
-                char* file_ext = extname(path);
-                if (file_ext && strcmp(file_ext, ext) == 0) {
-                    array_add(result, path);
-                    VERBOSE("Found file: %s", path);
-                }
-                free(file_ext);
+            }
+
+            free(path);
+        }
+
+        closedir(d);
+        return result;
+    }
+
+    char* change_folder_name(const char* path, const char* folder_name, size_t index) {
+        if (!path || !folder_name) {
+            ERROR("Invalid parameters for changing folder name");
+        }
+
+        char* path_copy = strdup(path);
+        if (!path_copy) {
+            ERROR("Failed to allocate memory for path copy");
+        }
+
+        char** components = NULL;
+        size_t comp_count = 0;
+
+        char* token = strtok(path_copy, "/\\");
+        while (token) {
+            components = realloc(components, (comp_count + 1) * sizeof(char*));
+            if (!components) {
+                free(path_copy);
+                ERROR("Failed to allocate memory for components array");
+            }
+
+            components[comp_count] = strdup(token);
+            comp_count++;
+
+            token = strtok(NULL, "/\\");
+        }
+
+        free(path_copy);
+
+        if (index >= comp_count) {
+            for (size_t i = 0; i < comp_count; i++) {
+                free(components[i]);
+            }
+            free(components);
+            return strdup(path);
+        }
+
+        free(components[index]);
+        components[index] = strdup(folder_name);
+
+        size_t result_len = 1;
+        for (size_t i = 0; i < comp_count; i++) {
+            result_len += strlen(components[i]) + 1;
+        }
+
+        char* result = malloc(result_len);
+        if (!result) {
+            for (size_t i = 0; i < comp_count; i++) {
+                free(components[i]);
+            }
+            free(components);
+            ERROR("Failed to allocate memory for result path");
+        }
+
+        result[0] = '\0';
+
+        for (size_t i = 0; i < comp_count; i++) {
+            strcat(result, components[i]);
+            if (i < comp_count - 1) {
+                strcat(result, "/");
             }
         }
 
-        free(path);
+        for (size_t i = 0; i < comp_count; i++) {
+            free(components[i]);
+        }
+        free(components);
+
+        return result;
     }
 
-    closedir(d);
-    return result;
-}
-#endif // BUILDER_H
+    #endif // BUILDER_H
