@@ -1,4 +1,7 @@
 #include "arr.h"
+#include "interpreter.h"
+#include "lexer.h"
+#include "logger.h"
 #include "parser.h"
 #include <stdio.h>
 
@@ -54,7 +57,7 @@ const char *token_type_to_str(TokenType type) {
 }
 
 int main(void) {
-  char *code = "(5 + 2) * 3 - 4";
+  char *code = "(5 + 2) * 3 - 4 * (13 + 23)";
   arr_t *tokens = parse(code);
 
   printf("Parsed tokens for code: \"%s\"\n", code);
@@ -82,15 +85,18 @@ int main(void) {
   }
   printf("----------------------------------------------------\n");
 
-  for (size_t i = 0; i < tokens->size; i++) {
-    token *t = (token *)arr_get(tokens, i);
+  ast_node *ast_tree = build_ast_tree(tokens);
+  if (!ast_tree)
+    elog("Error parsing ast tree , build_ast_tree return NULL ptr");
 
-    if (t->type != TOKEN_NUMBER && t->type != TOKEN_EOF && t->value.string) {
-      free(t->value.string);
-    }
+  print_ast(ast_tree, 2);
 
-    free(t);
-  }
+  double result = interpret(ast_tree);
+
+  printf("\n\nResult is %.2f \n", result);
+
+  free_ast(ast_tree);
   arr_destroy(tokens);
+
   return 0;
 }
