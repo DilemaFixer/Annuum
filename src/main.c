@@ -2,7 +2,6 @@
 #include "parser.h"
 #include <stdio.h>
 
-// Вспомогательная функция для вывода типа токена
 const char *token_type_to_str(TokenType type) {
   switch (type) {
   case TOKEN_EOF:
@@ -83,11 +82,9 @@ int main(void) {
   }
   printf("----------------------------------------------------\n");
 
-  // Освобождаем память
   for (size_t i = 0; i < tokens->size; i++) {
     token *t = (token *)arr_get(tokens, i);
 
-    // Для строковых токенов нужно освободить строку
     if (t->type != TOKEN_NUMBER && t->type != TOKEN_EOF && t->value.string) {
       free(t->value.string);
     }
