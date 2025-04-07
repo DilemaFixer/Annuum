@@ -40,7 +40,7 @@ ast_node *new_variable_node(const char *name){
     if(!node) elog("Error allocation memory for ast node (variable type)");
 
     node->type = NODE_VARIABLE;
-    node->var_name = strdup(name);
+    node->data.var_name = strdup(name);
 
     return node;
 }
@@ -54,8 +54,8 @@ ast_node *new_assignment_node(const char *var_name, ast_node *value){
     if(!node) elog("Error allocation memory for ast node (assigment type)");
 
     node->type = NODE_ASSIGNMENT;
-    node->data.assigment.var_name = strdup(var_name);
-    node->data.assigment.value = value;
+    node->data.assignment.var_name = strdup(var_name);
+    node->data.assignment.value = value;
 
     return node;
 }
@@ -82,20 +82,20 @@ ast_node *new_print_node(ast_node *expression){
     if(!node) elog("Error allocation memory for ast node (print type)");
 
     node->type = NODE_PRINT;
-    node->print.expression = expression;
+    node->data.print.expression = expression;
     return node;
 }
 
 ast_node *new_block_node(arr_t *statements){
-    if(!statement) elog("Can't create new block ast node , with null ptr on statements arr");
-    if(statement->count == 0) elog("Can't create new block ast node with empty statements arr");
-    if(!statement->items) elog("Can't create new block ast node with null ptr on arr_t -> items");
+    if(!statements) elog("Can't create new block ast node , with null ptr on statements arr");
+    if(statements->size == 0) elog("Can't create new block ast node with empty statements arr");
+    if(!statements->data) elog("Can't create new block ast node with null ptr on arr_t -> items");
 
     ast_node *node = (ast_node*)malloc(sizeof(ast_node));
     if(!node) elog("Error allocation memory for ast node (statemenets type)");
 
     node->type = NODE_BLOCK;
-    node->data.block.statement = statement;
+    node->data.block.statements = statements;
     return node;
 }
 
@@ -197,16 +197,19 @@ void lexer_one_skip(lexer_t *lexer){
 
 void lexer_syntax_error(lexer_t *lexer , const char* message){
     if(!lexer) elog("Can't log syntax error , lexer ptr is null");
-    if(!message || message == '\0') elog("Can't log syntax error , message is null or empty string");
+    if(!message || message == '\0')
+      elog("Can't log syntax error , message is null or empty string");
 
-    elog("Syntax error %zu:%zu %s" , lexer->line , lexer->offset , message);
+    elog("Syntax error %zu:%zu %s" , lexer->current->line , lexer->current->offset , message);
 }
 
 bool lexer_skip_if_eq(lexer_t *lexer , TokenType type){
     if(!lexer) elog("Can't skip if eq , lexer is null");
 
     if(lexer->current->type != type)
-        elog("Unexpected token type , excpect %d , have : %d" , type , lexer->current->type);
+        elog("Unexpected token type , excpect %d , have : %d" , 
+          type , 
+          lexer->current->type);
 
     lexer_one_skip(lexer);
     return true;
@@ -269,10 +272,10 @@ ast_node *build_ast_tree(arr_t *tokens) {
   ast_node *result = NULL;
 
   if (lexer->current->type == TOKEN_LBRACE) {
-    lexer_one_skip(lexer);
+    lexer_skip(lexer, 1);
     result = parse_block(lexer);
   } else {
-    result = parse_statment(lexer);
+    result = parse_statement(lexer);
   }
 
   if (lexer->current->type != TOKEN_EOF) {
@@ -290,7 +293,7 @@ ast_node *parse_block(lexer_t *lexer) {
 
   arr_t *arr = arr_create(1);
   while (lexer->current->type != TOKEN_RBRACE) {
-    ast_node *statement = parse_statment(lexer);
+    ast_node *statement = parse_statement(lexer);
 
     if(statement)
         arr_push(arr, statement);
@@ -299,101 +302,47 @@ ast_node *parse_block(lexer_t *lexer) {
   return new_block_node(arr);
 }
 
-ast_node *parse_statment(lexer_t *lexer){
+ast_node *parse_statement(lexer_t *lexer){
     if(!lexer) elog("Can't create statment ast node , have null ptr on lexer");
 
     if(lexer->current->type == TOKEN_IDENTIFIER){
-        const char* var_name = lexer->current.value.string;
-        lexer_one_skip(lexer);
-        lexer_skip_if_eq(lexer , TOKEN_ASSIGN);        
+        const char* var_name = lexer->current->value.string;
+        lexer_skip(lexer , 1);
+        if(lexer->current->type != TOKEN_ASSIGN)
+            elog("Syntax error : %zu:%zu expected '=' after identifier in assignment" ,
+            lexer->current->line , 
+            lexer->current->offset);
+        
+        lexer_skip(lexer , 1); 
         ast_node *expression = parse_expression(lexer);
-        lexer_skip_if_eq(lexer , TOKEN_SEMICOLON);
+
+        if(lexer->current->type != TOKEN_SEMICOLON)
+            elog("Syntax error : %zu:%zu expected ';' after expression" , 
+              lexer->current->line , 
+              lexer->current->offset);
 
         return new_assignment_node(var_name , expression);
     }
 
-    if(lexer_skip_if_eq(lexer , TOKEN_IF)){
-        return parse_if_statement(lexer);    
+    if(lexer->current->type == TOKEN_IF){
+        
     }
-
-    if(lexer_skip_if_eq(lexer , TOKEN_PRINT)){
-        return parse_print_statement(lexer);
-    }
-
-    if(lexer_skip_if_eq(lexer , TOKEN_LBRACE)){
-        lexer_one_skip(lexer);
-        return parse_block(lexer);
-    }
-
-    elog("Unexpected token at staement: %d at position %zu", 
-       lexer->current->type, lexer->current_index);
-    return NULL;
 }
-
-ast_node *parse_if_statement(lexer_t *lexer){
-    if(!lexer) elog("Can't parse if statment , null ptr to lexer");
-
-    lexer_skip_if_eq(lexer , TOKEN_IF);
-    asp_node *expression = parse_expression(lexer);
-    lexer_skip_if_eq(lexer , TOKEN_LBRACE);
-    ast_node *if_body = parse_block(lexer);
-
-    ast_node *else_body = NULL;
-    if(lexer->current->type == TOKEN_ELSE){
-        lexer_skip_if_eq(lexer , TOKEN_ELSE);
-        lexer_skip_if_eq(lexer , TOKEN_LBRACE);
-        else_body = parse_block(lexer);
-    }
-
-    return new_if_node(condition , if_body , else_body);
-}
-
-ast_node *parse_print_statement(lexer_t *lexer){
-    if(!lexer) elog("Can't parse print statement , lexer is NULL");
-
-    lexer_skip_if_eq(lexer , TOKEN_PRINT);
-    ast_node *expression = parse_expression(lexer);
-    lexer_skip_if_eq(lexer , TOKEN_SEMICOLON);
-    
-    return new_print_node(expression);
-}
+ast_node *parse_if_statement(lexer_t *lexer);
+ast_node *parse_print_statement(lexer_t *lexer);
+ast_node *parse_assignment(lexer_t *lexer);
 
 ast_node *parse_expression(lexer_t *lexer) {
-    return parse_comparison(lexer);
-}
-
-ast_node *parse_comparison(lexer_t *lexer) {
   if (!lexer)
-    elog("Can't parse comparison, lexer is null");
-    
+    elog("Can't parse expression, lexer ptr is null");
+
   ast_node *left = parse_term(lexer);
-  
-  while (lexer->current->type == TOKEN_GT || 
-         lexer->current->type == TOKEN_LT || 
-         lexer->current->type == TOKEN_EQ || 
-         lexer->current->type == TOKEN_LE || 
-         lexer->current->type == TOKEN_GE || 
-         lexer->current->type == TOKEN_NE) {
-    TokenType op = lexer->current->type;
-    lexer_skip(lexer, 1);
-    ast_node *right = parse_term(lexer);
-    left = new_binary_node(left, right, op);
-  }
-  
-  return left;
-}
-
-ast_node *parse_term(lexer_t *lexer){
-  if (!lexer)
-  elog("Can't parse expression, lexer ptr is null");
-
-  ast_node *left = parse_factor(lexer);
 
   while (lexer->current->type == TOKEN_PLUS ||
          lexer->current->type == TOKEN_MINUS) {
     TokenType op = lexer->current->type;
     lexer_skip(lexer, 1);
-    ast_node *right = parse_factor(lexer);
+    ast_node *right = parse_term(lexer);
 
     left = new_binary_node(left, right, op);
   }
@@ -401,7 +350,7 @@ ast_node *parse_term(lexer_t *lexer){
   return left;
 }
 
-ast_node *parse_factor(lexer_t *lexer) {
+ast_node *parse_term(lexer_t *lexer) {
   if (!lexer)
     elog("Can't parse term by null ptr on lexer");
 
@@ -419,7 +368,7 @@ ast_node *parse_factor(lexer_t *lexer) {
   return left;
 }
 
-ast_node *parse_primary(lexer_t *lexer) {
+ast_node *parse_factor(lexer_t *lexer) {
   if (!lexer)
     elog("Can't parse factor by null ptr on lexer");
 
@@ -430,9 +379,13 @@ ast_node *parse_primary(lexer_t *lexer) {
   }
 
   if (lexer->current->type == TOKEN_LPAREN) {
-    lexer_one_skip(lexer);
+    lexer_skip(lexer, 1);
     ast_node *expression = parse_expression(lexer);
-    lexer_skip_if_eq(lexer , TOKEN_RPAREN);
+
+    if (lexer->current->type != TOKEN_RPAREN)
+      elog("Expected ')' at position %zu", lexer->current_index);
+
+    lexer_skip(lexer, 1);
     return expression;
   }
 
