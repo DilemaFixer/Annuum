@@ -56,8 +56,41 @@ const char *token_type_to_str(TokenType type) {
   }
 }
 
+char* load_file(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Ошибка при открытии файла: %s\n", filename);
+        return NULL;
+    }
+    
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+    
+    char* buffer = (char*)malloc(file_size + 1);
+    if (buffer == NULL) {
+        printf("Ошибка при выделении памяти\n");
+        fclose(file);
+        return NULL;
+    }
+    
+    size_t read_size = fread(buffer, 1, file_size, file);
+    if (read_size != file_size) {
+        printf("Ошибка при чтении файла\n");
+        free(buffer);
+        fclose(file);
+        return NULL;
+    }
+    
+    buffer[file_size] = '\0';
+    
+    fclose(file);
+    return buffer;
+}
+
 int main(void) {
-  char *code = "(5 + 2) * 3 - 4 * (13 + 23)";
+  const char* src_path = "/Users/illashisko/Documents/GitHub/Annuum/src/src.txt";
+  char *code = load_file(src_path);
   arr_t *tokens = parse(code);
 
   printf("Parsed tokens for code: \"%s\"\n", code);
