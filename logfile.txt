@@ -1,0 +1,205 @@
+Parsed tokens for code: "
+// Это комментарий в SimpleScript
+// Объявление и присваивание переменных
+a = 5;
+b = 10;
+
+c = a + b * 2;  
+print(c);       
+
+if (c > 20) {
+    print(1);   
+} else {
+    print(0);
+}
+
+n = 5;
+factorial = 1;
+
+i = 1;
+if (i <= n) {
+    factorial = factorial * i;
+    i = i + 1;
+    
+    if (i <= n) {
+        factorial = factorial * i;
+        i = i + 1;
+    }
+}
+
+print(factorial);  
+"
+----------------------------------------------------
+| TYPE            | VALUE           | LINE       | OFFSET     |
+----------------------------------------------------
+| IDENTIFIER      | a               | 4          | 0          |
+| ASSIGN          | =               | 4          | 2          |
+| NUMBER          | 5.00            | 4          | 4          |
+| SEMICOLON       | ;               | 4          | 5          |
+| IDENTIFIER      | b               | 5          | 0          |
+| ASSIGN          | =               | 5          | 2          |
+| NUMBER          | 10.00           | 5          | 4          |
+| SEMICOLON       | ;               | 5          | 6          |
+| IDENTIFIER      | c               | 7          | 0          |
+| ASSIGN          | =               | 7          | 2          |
+| IDENTIFIER      | a               | 7          | 4          |
+| PLUS            | +               | 7          | 6          |
+| IDENTIFIER      | b               | 7          | 8          |
+| MULTIPLY        | *               | 7          | 10         |
+| NUMBER          | 2.00            | 7          | 12         |
+| SEMICOLON       | ;               | 7          | 13         |
+| PRINT           | print           | 8          | 0          |
+| LPAREN          | (               | 8          | 5          |
+| IDENTIFIER      | c               | 8          | 6          |
+| RPAREN          | )               | 8          | 7          |
+| SEMICOLON       | ;               | 8          | 8          |
+| IF              | if              | 10         | 0          |
+| LPAREN          | (               | 10         | 3          |
+| IDENTIFIER      | c               | 10         | 4          |
+| GT              | >               | 10         | 6          |
+| NUMBER          | 20.00           | 10         | 8          |
+| RPAREN          | )               | 10         | 10         |
+| LBRACE          | {               | 10         | 12         |
+| PRINT           | print           | 11         | 4          |
+| LPAREN          | (               | 11         | 9          |
+| NUMBER          | 1.00            | 11         | 10         |
+| RPAREN          | )               | 11         | 11         |
+| SEMICOLON       | ;               | 11         | 12         |
+| RBRACE          | }               | 12         | 0          |
+| ELSE            | else            | 12         | 2          |
+| LBRACE          | {               | 12         | 7          |
+| PRINT           | print           | 13         | 4          |
+| LPAREN          | (               | 13         | 9          |
+| NUMBER          | 0.00            | 13         | 10         |
+| RPAREN          | )               | 13         | 11         |
+| SEMICOLON       | ;               | 13         | 12         |
+| RBRACE          | }               | 14         | 0          |
+| IDENTIFIER      | n               | 16         | 0          |
+| ASSIGN          | =               | 16         | 2          |
+| NUMBER          | 5.00            | 16         | 4          |
+| SEMICOLON       | ;               | 16         | 5          |
+| IDENTIFIER      | factorial       | 17         | 0          |
+| ASSIGN          | =               | 17         | 10         |
+| NUMBER          | 1.00            | 17         | 12         |
+| SEMICOLON       | ;               | 17         | 13         |
+| IDENTIFIER      | i               | 19         | 0          |
+| ASSIGN          | =               | 19         | 2          |
+| NUMBER          | 1.00            | 19         | 4          |
+| SEMICOLON       | ;               | 19         | 5          |
+| IF              | if              | 20         | 0          |
+| LPAREN          | (               | 20         | 3          |
+| IDENTIFIER      | i               | 20         | 4          |
+| LE              | <=              | 20         | 6          |
+| IDENTIFIER      | n               | 20         | 9          |
+| RPAREN          | )               | 20         | 10         |
+| LBRACE          | {               | 20         | 12         |
+| IDENTIFIER      | factorial       | 21         | 4          |
+| ASSIGN          | =               | 21         | 14         |
+| IDENTIFIER      | factorial       | 21         | 16         |
+| MULTIPLY        | *               | 21         | 26         |
+| IDENTIFIER      | i               | 21         | 28         |
+| SEMICOLON       | ;               | 21         | 29         |
+| IDENTIFIER      | i               | 22         | 4          |
+| ASSIGN          | =               | 22         | 6          |
+| IDENTIFIER      | i               | 22         | 8          |
+| PLUS            | +               | 22         | 10         |
+| NUMBER          | 1.00            | 22         | 12         |
+| SEMICOLON       | ;               | 22         | 13         |
+| IF              | if              | 24         | 4          |
+| LPAREN          | (               | 24         | 7          |
+| IDENTIFIER      | i               | 24         | 8          |
+| LE              | <=              | 24         | 10         |
+| IDENTIFIER      | n               | 24         | 13         |
+| RPAREN          | )               | 24         | 14         |
+| LBRACE          | {               | 24         | 16         |
+| IDENTIFIER      | factorial       | 25         | 8          |
+| ASSIGN          | =               | 25         | 18         |
+| IDENTIFIER      | factorial       | 25         | 20         |
+| MULTIPLY        | *               | 25         | 30         |
+| IDENTIFIER      | i               | 25         | 32         |
+| SEMICOLON       | ;               | 25         | 33         |
+| IDENTIFIER      | i               | 26         | 8          |
+| ASSIGN          | =               | 26         | 10         |
+| IDENTIFIER      | i               | 26         | 12         |
+| PLUS            | +               | 26         | 14         |
+| NUMBER          | 1.00            | 26         | 16         |
+| SEMICOLON       | ;               | 26         | 17         |
+| RBRACE          | }               | 27         | 4          |
+| RBRACE          | }               | 28         | 0          |
+| PRINT           | print           | 30         | 0          |
+| LPAREN          | (               | 30         | 5          |
+| IDENTIFIER      | factorial       | 30         | 6          |
+| RPAREN          | )               | 30         | 15         |
+| SEMICOLON       | ;               | 30         | 16         |
+| EOF             |                 | 31         | 0          |
+----------------------------------------------------
+    BLOCK:
+      ASSIGNMENT: a =
+        NUMBER: 5
+      ASSIGNMENT: b =
+        NUMBER: 10
+      ASSIGNMENT: c =
+        BINARY_OP: +
+          VARIABLE: a
+          BINARY_OP: *
+            VARIABLE: b
+            NUMBER: 2
+      PRINT:
+        VARIABLE: c
+      IF:
+        CONDITION:
+          BINARY_OP: >
+            VARIABLE: c
+            NUMBER: 20
+        THEN:
+          BLOCK:
+            PRINT:
+              NUMBER: 1
+        ELSE:
+          BLOCK:
+            PRINT:
+              NUMBER: 0
+      ASSIGNMENT: n =
+        NUMBER: 5
+      ASSIGNMENT: factorial =
+        NUMBER: 1
+      ASSIGNMENT: i =
+        NUMBER: 1
+      IF:
+        CONDITION:
+          BINARY_OP: <=
+            VARIABLE: i
+            VARIABLE: n
+        THEN:
+          BLOCK:
+            ASSIGNMENT: factorial =
+              BINARY_OP: *
+                VARIABLE: factorial
+                VARIABLE: i
+            ASSIGNMENT: i =
+              BINARY_OP: +
+                VARIABLE: i
+                NUMBER: 1
+            IF:
+              CONDITION:
+                BINARY_OP: <=
+                  VARIABLE: i
+                  VARIABLE: n
+              THEN:
+                BLOCK:
+                  ASSIGNMENT: factorial =
+                    BINARY_OP: *
+                      VARIABLE: factorial
+                      VARIABLE: i
+                  ASSIGNMENT: i =
+                    BINARY_OP: +
+                      VARIABLE: i
+                      NUMBER: 1
+      PRINT:
+        VARIABLE: factorial
+25
+1
+2
+
+
+Result is 2.00 
