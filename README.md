@@ -43,7 +43,7 @@ This will create an executable called `anum` in the current directory.
 ./anum
 ```
 
-By default, it will look for a script file at `/Users/illashisko/Documents/GitHub/Annuum/src/src.txt`. You may need to modify the path in `main.c` to point to your script file.
+By default, it will look for a script file at `/Users/UserName/Documents/GitHub/Annuum/src/src.txt`. You may need to modify the path in `main.c` to point to your script file.
 
 ### ⚠️ Windows Compatibility
 
