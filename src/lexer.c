@@ -364,10 +364,10 @@ ast_node *build_ast_tree(arr_t *tokens) {
   if (!tokens->data)
     elog(
         "Can't parse ast tree from arr, ptr on data (arr_t -> **data) is null");
-
+  
   lexer_t *lexer = new_lexer(tokens);
   ast_node *result = NULL;
-
+  
   if (lexer->current->type == TOKEN_LBRACE) {
     lexer_skip(lexer, 1);
     result = parse_block(lexer);
@@ -377,14 +377,23 @@ ast_node *build_ast_tree(arr_t *tokens) {
       lexer_syntax_error(lexer, "Expected '}'");
     }
   } else {
-    result = parse_statement(lexer);
+    arr_t *statements = arr_create(1);
+    
+    while (lexer->current->type != TOKEN_EOF) {
+      ast_node *statement = parse_statement(lexer);
+      if (statement) {
+        arr_push(statements, statement);
+      }
+    }
+    
+    if (statements->size > 0) {
+      result = new_block_node(statements);
+    } else {
+      arr_destroy(statements);
+      elog("No valid statements found in script");
+    }
   }
-
-  if (lexer->current->type != TOKEN_EOF) {
-    printf("Warning: Not all tokens were processed, stopped at position %zu\n",
-           lexer->current_index);
-  }
-
+  
   free_lexer(lexer);
   return result;
 }
