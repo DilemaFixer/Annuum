@@ -117,6 +117,22 @@ ast_node *new_block_node(arr_t *statements) {
   return node;
 }
 
+ast_node *new_loop_node(ast_node *condition, ast_node *loop_body) {
+  if (!condition)
+    elog("Can't create loop ast node with null ptr on contidion ast node");
+  if (!loop_body)
+    elog("Can't create loop ast node with null ptr on loop body ast node");
+
+  ast_node *node = (ast_node *)malloc(sizeof(ast_node));
+  if (!node)
+    elog("Error allocation memory for ast node (loop type)");
+
+  node->type = NODE_LOOP;
+  node->data.loop.condition = condition;
+  node->data.loop.loop_body = loop_body;
+  return node;
+}
+
 void free_ast(ast_node *node) {
   if (!node)
     return;
@@ -148,6 +164,9 @@ void free_ast(ast_node *node) {
     }
     arr_destroy(node->data.block.statements);
     break;
+  case NODE_LOOP:
+    free_ast(node->data.loop.condition);
+    free_ast(node->data.loop.loop_body);
   default:
     break;
   }
@@ -364,10 +383,10 @@ ast_node *build_ast_tree(arr_t *tokens) {
   if (!tokens->data)
     elog(
         "Can't parse ast tree from arr, ptr on data (arr_t -> **data) is null");
-  
+
   lexer_t *lexer = new_lexer(tokens);
   ast_node *result = NULL;
-  
+
   if (lexer->current->type == TOKEN_LBRACE) {
     lexer_skip(lexer, 1);
     result = parse_block(lexer);
@@ -378,14 +397,14 @@ ast_node *build_ast_tree(arr_t *tokens) {
     }
   } else {
     arr_t *statements = arr_create(1);
-    
+
     while (lexer->current->type != TOKEN_EOF) {
       ast_node *statement = parse_statement(lexer);
       if (statement) {
         arr_push(statements, statement);
       }
     }
-    
+
     if (statements->size > 0) {
       result = new_block_node(statements);
     } else {
@@ -393,7 +412,7 @@ ast_node *build_ast_tree(arr_t *tokens) {
       elog("No valid statements found in script");
     }
   }
-  
+
   free_lexer(lexer);
   return result;
 }
@@ -453,6 +472,10 @@ ast_node *parse_statement(lexer_t *lexer) {
     return parse_print_statement(lexer);
   }
 
+  if (lexer->current->type == TOKEN_LOOP) {
+    return parse_loop_statement(lexer);
+  }
+
   if (lexer->current->type == TOKEN_LBRACE) {
     lexer_one_skip(lexer);
     ast_node *block = parse_block(lexer);
@@ -495,6 +518,28 @@ ast_node *parse_if_statement(lexer_t *lexer) {
   }
 
   return new_if_node(condition, if_body, else_body);
+}
+
+ast_node *parse_loop_statement(lexer_t *lexer) {
+  if (lexer == NULL)
+    elog("Can't parse loop with null ptr on lexer");
+
+  lexer_skip_if_eq(lexer, TOKEN_LOOP);
+  if (lexer->current->type != TOKEN_LPAREN)
+    elog("Syntax error : %zu:%zu expected '(' after 'loop'",
+         lexer->current->line, lexer->current->offset);
+
+  lexer_skip_if_eq(lexer, TOKEN_LPAREN);
+  ast_node *condition = parse_comparison(lexer);
+
+  if (lexer->current->type != TOKEN_RPAREN)
+    elog("Syntax error : %zu:%zu expected ')' after 'loop'",
+         lexer->current->line, lexer->current->offset);
+  lexer_skip_if_eq(lexer, TOKEN_RPAREN);
+
+  ast_node *loop_body = parse_statement(lexer);
+
+  return new_loop_node(condition, loop_body);
 }
 
 ast_node *parse_print_statement(lexer_t *lexer) {

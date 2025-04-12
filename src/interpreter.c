@@ -4,20 +4,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Структура для хранения переменных
 typedef struct {
   char *name;
   double value;
 } variable;
 
-// Хранилище переменных (простая реализация)
 typedef struct {
   variable *vars;
   size_t count;
   size_t capacity;
 } variable_store;
 
-// Инициализация хранилища переменных
 variable_store *init_variable_store() {
   variable_store *store = malloc(sizeof(variable_store));
   store->vars = malloc(sizeof(variable) * 10);
@@ -26,9 +23,7 @@ variable_store *init_variable_store() {
   return store;
 }
 
-// Добавление или обновление переменной
 void set_variable(variable_store *store, const char *name, double value) {
-  // Поиск существующей переменной
   for (size_t i = 0; i < store->count; i++) {
     if (strcmp(store->vars[i].name, name) == 0) {
       store->vars[i].value = value;
@@ -36,7 +31,6 @@ void set_variable(variable_store *store, const char *name, double value) {
     }
   }
 
-  // Если переменная не найдена, добавляем новую
   if (store->count >= store->capacity) {
     store->capacity *= 2;
     store->vars = realloc(store->vars, sizeof(variable) * store->capacity);
@@ -47,7 +41,6 @@ void set_variable(variable_store *store, const char *name, double value) {
   store->count++;
 }
 
-// Получение значения переменной
 double get_variable(variable_store *store, const char *name) {
   for (size_t i = 0; i < store->count; i++) {
     if (strcmp(store->vars[i].name, name) == 0) {
@@ -58,7 +51,6 @@ double get_variable(variable_store *store, const char *name) {
   return 0.0;
 }
 
-// Освобождение памяти хранилища переменных
 void free_variable_store(variable_store *store) {
   for (size_t i = 0; i < store->count; i++) {
     free(store->vars[i].name);
@@ -67,7 +59,6 @@ void free_variable_store(variable_store *store) {
   free(store);
 }
 
-// Основная функция интерпретации
 double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
   if (!ast_tree)
     elog("Can't interpret tree by null ptr");
@@ -128,6 +119,17 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
     }
     return 0.0;
 
+  case NODE_LOOP:
+
+    while (true) {
+      one = interpret_with_vars(ast_tree->data.loop.condition, vars);
+
+      if (one == 0.0)
+        break;
+
+      interpret_with_vars(ast_tree->data.loop.loop_body, vars);
+    }
+
   case NODE_PRINT:
     one = interpret_with_vars(ast_tree->data.print.expression, vars);
     printf("%g\n", one);
@@ -150,7 +152,6 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
   }
 }
 
-// Обертка для совместимости
 double interpret(ast_node *ast_tree) {
   variable_store *vars = init_variable_store();
   double result = interpret_with_vars(ast_tree, vars);

@@ -19,6 +19,7 @@ typedef enum {
     TOKEN_SEMICOLON,   // Точка с запятой (;)
     TOKEN_IF,          // Ключевое слово if
     TOKEN_ELSE,        // Ключевое слово else
+    TOKEN_LOOP,        // Ключевое слово loop
     TOKEN_PRINT,       // Ключевое слово print
     TOKEN_GT,          // Больше (>)
     TOKEN_LT,          // Меньше (<)
