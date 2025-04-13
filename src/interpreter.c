@@ -10,6 +10,18 @@
 
 typedef struct {
   char *name;
+  arr_t *parameters;
+  ast_node *body;
+} function_definition;
+
+typedef struct {
+  function_definition *funcs;
+  size_t count;
+  size_t capacity;
+} function_store;
+
+typedef struct {
+  char *name;
   double value;
   bool is_const;
 } variable;
@@ -70,7 +82,46 @@ void free_variable_store(variable_store *store) {
   free(store);
 }
 
-double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
+function_store *init_function_store() {
+  function_store *store = malloc(sizeof(function_store));
+  store->funcs = malloc(sizeof(function_definition) * 10);
+  store->count = 0;
+  store->capacity = 10;
+  return store;
+}
+
+void add_function(function_store *store, const char *name, arr_t *parameters,
+                  ast_node *body) {
+  for (size_t i = 0; i < store->count; i++) {
+    if (strcmp(store->funcs[i].name, name) == 0) {
+      elog("Function '%s' already defined", name);
+    }
+  }
+
+  if (store->count >= store->capacity) {
+    store->capacity *= 2;
+    store->funcs =
+        realloc(store->funcs, sizeof(function_definition) * store->capacity);
+  }
+
+  store->funcs[store->count].name = strdup(name);
+  store->funcs[store->count].parameters = parameters;
+  store->funcs[store->count].body = body;
+  store->count++;
+}
+
+function_definition *get_function(function_store *store, const char *name) {
+  for (size_t i = 0; i < store->count; i++) {
+    if (strcmp(store->funcs[i].name, name) == 0) {
+      return &store->funcs[i];
+    }
+  }
+  elog("Function '%s' not found", name);
+  return NULL;
+}
+
+double interpret_with_vars(ast_node *ast_tree, variable_store *vars,
+                           function_store *funcs) {
   if (!ast_tree)
     elog("Can't interpret tree by null ptr");
 
@@ -91,8 +142,8 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
     return get_variable(vars, ast_tree->data.var.var_name);
 
   case NODE_BIN_OP:
-    one = interpret_with_vars(ast_tree->data.binary.left, vars);
-    two = interpret_with_vars(ast_tree->data.binary.right, vars);
+    one = interpret_with_vars(ast_tree->data.binary.left, vars, funcs);
+    two = interpret_with_vars(ast_tree->data.binary.right, vars, funcs);
 
     switch (ast_tree->data.binary.op) {
     case TOKEN_PLUS:
@@ -123,29 +174,30 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
     }
 
   case NODE_ASSIGNMENT:
-    one = interpret_with_vars(ast_tree->data.assignment.value, vars);
+    one = interpret_with_vars(ast_tree->data.assignment.value, vars, funcs);
     set_variable(vars, ast_tree->data.assignment.var_name, one,
                  ast_tree->data.assignment.is_const);
     return one;
 
   case NODE_IF:
-    one = interpret_with_vars(ast_tree->data.if_stmt.condition, vars);
+    one = interpret_with_vars(ast_tree->data.if_stmt.condition, vars, funcs);
     if (one != 0.0) {
-      return interpret_with_vars(ast_tree->data.if_stmt.if_body, vars);
+      return interpret_with_vars(ast_tree->data.if_stmt.if_body, vars, funcs);
     } else if (ast_tree->data.if_stmt.else_body) {
-      return interpret_with_vars(ast_tree->data.if_stmt.else_body, vars);
+      return interpret_with_vars(ast_tree->data.if_stmt.else_body, vars, funcs);
     }
     return 0.0;
 
   case NODE_LOOP:
 
     while (true) {
-      one = interpret_with_vars(ast_tree->data.loop.condition, vars);
+      one = interpret_with_vars(ast_tree->data.loop.condition, vars, funcs);
 
       if (one == 0.0)
         break;
 
-      double result = interpret_with_vars(ast_tree->data.loop.loop_body, vars);
+      double result =
+          interpret_with_vars(ast_tree->data.loop.loop_body, vars, funcs);
 
       if (result == LOOP_NEXT_SIGNAL)
         continue;
@@ -156,7 +208,7 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
     return 0.0;
 
   case NODE_PRINT:
-    one = interpret_with_vars(ast_tree->data.print.expression, vars);
+    one = interpret_with_vars(ast_tree->data.print.expression, vars, funcs);
     printf("%g\n", one);
     return one;
 
@@ -164,13 +216,51 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
     one = 0.0;
     for (size_t i = 0; i < ast_tree->data.block.statements->size; i++) {
       ast_node *statement = arr_get(ast_tree->data.block.statements, i);
-      one = interpret_with_vars(statement, vars);
+      one = interpret_with_vars(statement, vars, funcs);
 
       if (one == LOOP_NEXT_SIGNAL || one == LOOP_STOP_SIGNAL) {
         return one;
       }
     }
     return one;
+
+  case NODE_FUNCTION_DEF:
+    add_function(funcs, ast_tree->data.function_def.name,
+                 ast_tree->data.function_def.params,
+                 ast_tree->data.function_def.body);
+    return 0.0;
+
+  case NODE_FUNCTION_CALL: {
+    function_definition *func =
+        get_function(funcs, ast_tree->data.function_call.name);
+
+    variable_store *local_vars = init_variable_store();
+
+    size_t param_count = func->parameters->size;
+    size_t arg_count = ast_tree->data.function_call.arguments->size;
+
+    if (param_count != arg_count)
+      elog("Function '%s' called with wrong number of arguments",
+           ast_tree->data.function_call.name);
+
+    for (size_t i = 0; i < param_count; i++) {
+      char *param_name = (char *)arr_get(func->parameters, i);
+      ast_node *arg_expr = arr_get(ast_tree->data.function_call.arguments, i);
+
+      double arg_value = interpret_with_vars(arg_expr, vars, funcs);
+
+      set_variable(local_vars, param_name, arg_value, false);
+    }
+
+    double result = interpret_with_vars(func->body, local_vars, funcs);
+
+    free_variable_store(local_vars);
+
+    return result;
+  }
+
+  case NODE_RETURN:
+    return interpret_with_vars(ast_tree->data.return_stm.value, vars, funcs);
 
   case NODE_NOOP:
     return 0.0;
@@ -183,7 +273,8 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
 
 double interpret(ast_node *ast_tree) {
   variable_store *vars = init_variable_store();
-  double result = interpret_with_vars(ast_tree, vars);
+  function_store *funcs = init_function_store();
+  double result = interpret_with_vars(ast_tree, vars, funcs);
   free_variable_store(vars);
   return result;
 }

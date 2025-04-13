@@ -17,7 +17,11 @@ typedef enum ast_type {
     NODE_BLOCK,
     NODE_NOOP,
     NODE_LOOP_NEXT,
-    NODE_LOOP_STOP
+    NODE_LOOP_STOP,
+    NODE_FUNCTION_DEF,
+    NODE_FUNCTION_CALL,
+    NODE_RETURN,
+    NODE_PARAM_LIST,
 } ast_type;
 
 typedef struct ast_node {
@@ -60,6 +64,21 @@ typedef struct ast_node {
             struct ast_node *condition;
             struct ast_node *loop_body;
         } loop;
+
+        struct {
+            char *name;
+            arr_t *params;
+            struct ast_node *body;
+        } function_def;
+
+        struct {
+            char *name;
+            arr_t *arguments;
+        } function_call;
+
+        struct {
+            struct ast_node *value;
+        } return_stm;
     } data;
 } ast_node;
 
@@ -81,6 +100,9 @@ ast_node *new_block_node(arr_t *statements);
 ast_node *new_loop_node(ast_node *condition , ast_node *loop_body);
 ast_node *new_loop_stop_node();
 ast_node *new_loop_next_node();
+ast_node *new_function_def_node(const char *name, arr_t *parameters, ast_node *body);
+ast_node *new_function_call_node(const char *name, arr_t *arguments);
+ast_node *new_return_node(ast_node *value);
 
 ast_node *build_ast_tree(arr_t* tokens);
 void free_ast(ast_node *node);
@@ -102,6 +124,11 @@ ast_node *parse_statement(lexer_t *lexer);
 ast_node *parse_if_statement(lexer_t *lexer);
 ast_node *parse_print_statement(lexer_t *lexer);
 ast_node *parse_loop_statement(lexer_t *lexer);
+ast_node *parse_function_def(lexer_t *lexer);
+
+ast_node *parse_function_call(lexer_t *lexer, const char *name);
+ast_node *parse_return_statement(lexer_t *lexer);
+
 ast_node *parse_expression(lexer_t *lexer);
 ast_node *parse_comparison(lexer_t *lexer);
 ast_node *parse_term(lexer_t *lexer);

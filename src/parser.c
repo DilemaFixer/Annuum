@@ -144,6 +144,14 @@ TokenType get_token_type(const char *str) {
     return TOKEN_LOOP_STOP;
   if (is_keyword(str, "const"))
     return TOKEN_CONST;
+  if (is_keyword(str, "fn"))
+    return TOKEN_FN;
+  if (is_keyword(str, "return"))
+    return TOKEN_RETURN;
+  if (is_keyword(str, "->"))
+    return TOKEN_ARROW;
+  if (is_keyword(str, ","))
+    return TOKEN_COMMA;
 
   if (is_keyword(str, "+"))
     return TOKEN_PLUS;
@@ -185,10 +193,8 @@ TokenType get_token_type(const char *str) {
 char *extract_word(const char *str, size_t *length) {
   if (!str)
     return NULL;
-
   *length = 0;
   bool is_ssymbol = is_system_symbol(*str);
-
   bool potential_negative_number =
       (*str == '-' && (isdigit(*(str + 1)) || *(str + 1) == '.'));
   bool potential_decimal_point = (*str == '.' && isdigit(*(str + 1)));
@@ -197,7 +203,8 @@ char *extract_word(const char *str, size_t *length) {
     if ((*str == '=' && *(str + 1) == '=') ||
         (*str == '<' && *(str + 1) == '=') ||
         (*str == '>' && *(str + 1) == '=') ||
-        (*str == '!' && *(str + 1) == '=')) {
+        (*str == '!' && *(str + 1) == '=') ||
+        (*str == '-' && *(str + 1) == '>')) {
       *length = 2;
     } else {
       *length = 1;
@@ -205,7 +212,6 @@ char *extract_word(const char *str, size_t *length) {
   } else {
     bool is_potential_number =
         isdigit(*str) || potential_negative_number || potential_decimal_point;
-
     while (str[*length] && !isspace(str[*length])) {
       if (is_system_symbol(str[*length])) {
         if (is_potential_number && str[*length] == '.' && str[*length + 1] &&
@@ -227,12 +233,10 @@ char *extract_word(const char *str, size_t *length) {
   if (!result) {
     return NULL;
   }
-
   for (size_t i = 0; i < *length; i++) {
     result[i] = str[i];
   }
   result[*length] = '\0';
-
   return result;
 }
 

@@ -4,6 +4,43 @@
 #include <stdio.h>
 #include <string.h>
 
+ast_node *new_function_def_node(const char *name, arr_t *parameters,
+                                ast_node *body) {
+  ast_node *node = (ast_node *)malloc(sizeof(ast_node));
+  if (!node)
+    elog("Error allocation memory for ast node (function definition)");
+
+  node->type = NODE_FUNCTION_DEF;
+  node->data.function_def.name = strdup(name);
+  node->data.function_def.params = parameters;
+  node->data.function_def.body = body;
+
+  return node;
+}
+
+ast_node *new_function_call_node(const char *name, arr_t *arguments) {
+  ast_node *node = (ast_node *)malloc(sizeof(ast_node));
+  if (!node)
+    elog("Error allocation memory for ast node (function call)");
+
+  node->type = NODE_FUNCTION_CALL;
+  node->data.function_call.name = strdup(name);
+  node->data.function_call.arguments = arguments;
+
+  return node;
+}
+
+ast_node *new_return_node(ast_node *value) {
+  ast_node *node = (ast_node *)malloc(sizeof(ast_node));
+  if (!node)
+    elog("Error allocation memory for ast node (return)");
+
+  node->type = NODE_RETURN;
+  node->data.return_stm.value = value;
+
+  return node;
+}
+
 ast_node *new_loop_stop_node() {
   ast_node *node = (ast_node *)malloc(sizeof(ast_node));
   if (!node)
@@ -534,6 +571,14 @@ ast_node *parse_statement(lexer_t *lexer) {
     return new_assignment_node(var_name, expression, false);
   }
 
+  if (lexer->current->type == TOKEN_FN) {
+    return parse_function_def(lexer);
+  }
+
+  if (lexer->current->type == TOKEN_RETURN) {
+    return parse_return_statement(lexer);
+  }
+
   if (lexer->current->type == TOKEN_IF) {
     return parse_if_statement(lexer);
   }
@@ -640,6 +685,126 @@ ast_node *parse_print_statement(lexer_t *lexer) {
   return new_print_node(expression);
 }
 
+ast_node *parse_function_def(lexer_t *lexer) {
+  lexer_skip_if_eq(lexer, TOKEN_FN);
+
+  if (lexer->current->type != TOKEN_IDENTIFIER)
+    lexer_syntax_error(lexer, "after 'fn' must go identifier");
+
+  char *name = strdup(lexer->current->value.string);
+  lexer_one_skip(lexer);
+
+  if (lexer->current->type != TOKEN_LPAREN)
+    lexer_syntax_error(
+        lexer,
+        "after function identifier must go '(' params|or empty place ')' ");
+  lexer_skip_if_eq(lexer, TOKEN_LPAREN);
+
+  arr_t *params = arr_create(4);
+  if (lexer->current->type != TOKEN_RPAREN) {
+    do {
+      if (lexer->current->type != TOKEN_IDENTIFIER)
+        lexer_syntax_error(
+            lexer, "expected params or ')' in function declaration after '(' ");
+
+      char *param = strdup(lexer->current->value.string);
+      arr_push(params, param);
+      lexer_one_skip(lexer);
+
+      if (lexer->current->type == TOKEN_COMMA)
+        lexer_one_skip(lexer);
+      else
+        break;
+    } while (true);
+  }
+
+  lexer_skip_if_eq(lexer, TOKEN_RPAREN);
+
+  if (lexer->current->type == TOKEN_ARROW) {
+    lexer_one_skip(lexer);
+    ast_node *expr = parse_expression(lexer);
+
+    ast_node *return_node = new_return_node(expr);
+
+    arr_t *stms = arr_create(1);
+    arr_push(stms, expr);
+    ast_node *block_node = new_block_node(stms);
+
+    if (lexer->current->type != TOKEN_SEMICOLON)
+      lexer_syntax_error(lexer, "expected ';' after func expression");
+    else
+      lexer_one_skip(lexer);
+
+    ast_node *func_def_node = new_function_def_node(name, params, block_node);
+    return func_def_node;
+  }
+
+  if (lexer->current->type == TOKEN_LBRACE) {
+    lexer_one_skip(lexer);
+
+    ast_node *block = parse_block(lexer);
+
+    if (lexer->current->type != TOKEN_RBRACE)
+      lexer_syntax_error(lexer, "expected '}' in the on of func body");
+    else
+      lexer_one_skip(lexer);
+
+    ast_node *func_def_node = new_function_def_node(name, params, block);
+    return func_def_node;
+  }
+
+  lexer_syntax_error(lexer, "unexpected symbol after fynction "
+                            "declaration , must be or '->' or '{' ");
+}
+
+ast_node *parse_function_call(lexer_t *lexer, const char *name) {
+  if (!lexer)
+    elog("Can't parse function call with null ptr on lexer");
+  if (!name || *name == '\0')
+    elog("Can't parse function call with null or empty function name");
+
+  lexer_skip_if_eq(lexer, TOKEN_LPAREN);
+
+  arr_t *arguments = arr_create(4);
+
+  if (lexer->current->type != TOKEN_RPAREN) {
+    do {
+      if (lexer->current->type != TOKEN_IDENTIFIER)
+        lexer_syntax_error(lexer, "expected list of parameters of ')' ");
+
+      ast_node *arg_expr = parse_expression(lexer);
+      arr_push(arguments, arg_expr);
+
+      if (lexer->current->type == TOKEN_COMMA)
+        lexer_one_skip(lexer);
+      else
+        break;
+    } while (true);
+  }
+
+  lexer_skip_if_eq(lexer, TOKEN_RPAREN);
+
+  return new_function_call_node(name, arguments);
+}
+
+ast_node *parse_return_statement(lexer_t *lexer) {
+  if (!lexer)
+    elog("Can't parse return stm , lexer ptr is null");
+
+  lexer_skip_if_eq(lexer, TOKEN_RETURN);
+
+  ast_node *value = NULL;
+
+  if (lexer->current->type != TOKEN_SEMICOLON)
+    value = parse_expression(lexer);
+  else
+    value = new_number_node(0.0);
+
+  lexer_skip_if_eq(lexer, TOKEN_SEMICOLON);
+
+  return new_return_node(value);
+}
+
 ast_node *parse_comparison(lexer_t *lexer) {
   if (!lexer)
     elog("Can't parse comparison, lexer is null");
@@ -713,9 +878,13 @@ ast_node *parse_factor(lexer_t *lexer) {
   }
 
   if (lexer->current->type == TOKEN_IDENTIFIER) {
-    const char *var_name = lexer->current->value.string;
+    const char *name = lexer->current->value.string;
     lexer_one_skip(lexer);
-    return new_variable_node(var_name, false);
+
+    if (lexer->current->type == TOKEN_LPAREN)
+      return parse_function_call(lexer, name);
+    else
+      return new_variable_node(name, false);
   }
 
   if (lexer->current->type == TOKEN_LPAREN) {

@@ -30,6 +30,10 @@ typedef enum {
     TOKEN_LE,          // Меньше или равно (<=)
     TOKEN_GE,          // Больше или равно (>=)
     TOKEN_NE,          // Не равно (!=)
+    TOKEN_FN,         // Ключевое слово fn
+    TOKEN_RETURN,     // Ключевое слово return
+    TOKEN_ARROW,      // Стрелка ->
+    TOKEN_COMMA,      // Запятая для разделения параметров
 } TokenType;
 
 typedef struct token {
