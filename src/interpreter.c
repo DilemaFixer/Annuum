@@ -1,12 +1,18 @@
 #include "lexer.h"
 #include "logger.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#define LOOP_NEXT_SIGNAL -123456789.0
+#define LOOP_STOP_SIGNAL -987654321.0
+
 typedef struct {
   char *name;
   double value;
+  bool is_const;
+  bool is_init;
 } variable;
 
 typedef struct {
@@ -70,6 +76,12 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
   case NODE_NUMBER:
     return ast_tree->data.value;
 
+  case NODE_LOOP_STOP:
+    return LOOP_STOP_SIGNAL;
+
+  case NODE_LOOP_NEXT:
+    return LOOP_NEXT_SIGNAL;
+
   case NODE_VARIABLE:
     return get_variable(vars, ast_tree->data.var_name);
 
@@ -127,8 +139,15 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
       if (one == 0.0)
         break;
 
-      interpret_with_vars(ast_tree->data.loop.loop_body, vars);
+      double result = interpret_with_vars(ast_tree->data.loop.loop_body, vars);
+
+      if (result == LOOP_NEXT_SIGNAL)
+        continue;
+
+      if (result == LOOP_STOP_SIGNAL)
+        break;
     }
+    return 0.0;
 
   case NODE_PRINT:
     one = interpret_with_vars(ast_tree->data.print.expression, vars);
@@ -140,6 +159,10 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
     for (size_t i = 0; i < ast_tree->data.block.statements->size; i++) {
       ast_node *statement = arr_get(ast_tree->data.block.statements, i);
       one = interpret_with_vars(statement, vars);
+
+      if (one == LOOP_NEXT_SIGNAL || one == LOOP_STOP_SIGNAL) {
+        return one;
+      }
     }
     return one;
 

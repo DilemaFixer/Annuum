@@ -5,6 +5,24 @@
 #include "parser.h"
 #include <string.h>
 
+ast_node *new_loop_stop_node() {
+  ast_node *node = (ast_node *)malloc(sizeof(ast_node));
+  if (!node)
+    elog("Error allocation memory for ast node (number type)");
+
+  node->type = NODE_LOOP_STOP;
+  return node;
+}
+
+ast_node *new_loop_next_node() {
+  ast_node *node = (ast_node *)malloc(sizeof(ast_node));
+  if (!node)
+    elog("Error allocation memory for ast node (number type)");
+
+  node->type = NODE_LOOP_NEXT;
+  return node;
+}
+
 ast_node *new_number_node(double value) {
   ast_node *node = (ast_node *)malloc(sizeof(ast_node));
   if (!node)
@@ -444,6 +462,28 @@ ast_node *parse_statement(lexer_t *lexer) {
   if (lexer->current->type == TOKEN_SEMICOLON) {
     lexer_one_skip(lexer);
     return NULL; // Skip empty statements
+  }
+
+  if (lexer->current->type == TOKEN_LOOP_STOP) {
+    lexer_one_skip(lexer);
+
+    if (lexer->current->type != TOKEN_SEMICOLON)
+      elog("Syntax error: %zu:%zu expected ';' after 'stop'",
+           lexer->current->line, lexer->current->offset);
+
+    lexer_one_skip(lexer);
+    return new_loop_stop_node();
+  }
+
+  if (lexer->current->type == TOKEN_LOOP_NEXT) {
+    lexer_one_skip(lexer);
+
+    if (lexer->current->type != TOKEN_SEMICOLON)
+      elog("Syntax error: %zu:%zu expected ';' after 'next'",
+           lexer->current->line, lexer->current->offset);
+
+    lexer_one_skip(lexer);
+    return new_loop_next_node();
   }
 
   if (lexer->current->type == TOKEN_IDENTIFIER) {

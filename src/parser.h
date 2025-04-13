@@ -20,6 +20,8 @@ typedef enum {
     TOKEN_IF,          // Ключевое слово if
     TOKEN_ELSE,        // Ключевое слово else
     TOKEN_LOOP,        // Ключевое слово loop
+    TOKEN_LOOP_NEXT,   // Ключевое слово next
+    TOKEN_LOOP_STOP,   // Ключевое слово stop
     TOKEN_PRINT,       // Ключевое слово print
     TOKEN_GT,          // Больше (>)
     TOKEN_LT,          // Меньше (<)
@@ -41,7 +43,7 @@ typedef struct token {
 
 token *new_string_token(TokenType type, char* string, size_t line, size_t offset);
 token *new_number_token(TokenType type, double number, size_t line, size_t offset);
-token *new_token(TokenType type, size_t line, size_t offset);
+token *new_token(TokenType type, size_t line , size_t offset);
 
 arr_t *parse(char* code);
 void skip(char **str, size_t count);

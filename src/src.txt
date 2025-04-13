@@ -1,11 +1,13 @@
 // Calculate factorial of 5 using loop
 
-n = 5;
+n = 10;
 factorial = 1;
 i = 1;
-
 loop(i <= n) {
     factorial = factorial * i;
-    print(factorial);
     i = i + 1;
+    if(factorial > 120){
+        stop;
+    }
+    print(factorial);
 }

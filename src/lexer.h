@@ -14,7 +14,9 @@ typedef enum ast_type {
     NODE_LOOP,
     NODE_PRINT,
     NODE_BLOCK,
-    NODE_NOOP
+    NODE_NOOP,
+    NODE_LOOP_NEXT,
+    NODE_LOOP_STOP
 } ast_type;
 
 typedef struct ast_node {
@@ -70,8 +72,9 @@ ast_node *new_assignment_node(const char *var_name, ast_node *value);
 ast_node *new_if_node(ast_node *condition, ast_node *if_body, ast_node *else_body);
 ast_node *new_print_node(ast_node *expression);
 ast_node *new_block_node(arr_t *statements);
-ast_node *parse_comparison(lexer_t *lexer);
 ast_node *new_loop_node(ast_node *condition , ast_node *loop_body);
+ast_node *new_loop_stop_node();
+ast_node *new_loop_next_node();
 
 ast_node *build_ast_tree(arr_t* tokens);
 void free_ast(ast_node *node);
@@ -97,5 +100,6 @@ ast_node *parse_expression(lexer_t *lexer);
 ast_node *parse_comparison(lexer_t *lexer);
 ast_node *parse_term(lexer_t *lexer);
 ast_node *parse_factor(lexer_t *lexer);
+ast_node *parse_comparison(lexer_t *lexer);
 
 #endif
