@@ -12,7 +12,6 @@ typedef struct {
   char *name;
   double value;
   bool is_const;
-  bool is_init;
 } variable;
 
 typedef struct {
@@ -29,9 +28,14 @@ variable_store *init_variable_store() {
   return store;
 }
 
-void set_variable(variable_store *store, const char *name, double value) {
+void set_variable(variable_store *store, const char *name, double value,
+                  bool is_const) {
   for (size_t i = 0; i < store->count; i++) {
     if (strcmp(store->vars[i].name, name) == 0) {
+      if (store->vars[i].is_const) {
+        elog("syntax error , try set value to const var %s", name);
+      }
+
       store->vars[i].value = value;
       return;
     }
@@ -44,6 +48,7 @@ void set_variable(variable_store *store, const char *name, double value) {
 
   store->vars[store->count].name = strdup(name);
   store->vars[store->count].value = value;
+  store->vars[store->count].is_const = is_const;
   store->count++;
 }
 
@@ -83,7 +88,7 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
     return LOOP_NEXT_SIGNAL;
 
   case NODE_VARIABLE:
-    return get_variable(vars, ast_tree->data.var_name);
+    return get_variable(vars, ast_tree->data.var.var_name);
 
   case NODE_BIN_OP:
     one = interpret_with_vars(ast_tree->data.binary.left, vars);
@@ -119,7 +124,8 @@ double interpret_with_vars(ast_node *ast_tree, variable_store *vars) {
 
   case NODE_ASSIGNMENT:
     one = interpret_with_vars(ast_tree->data.assignment.value, vars);
-    set_variable(vars, ast_tree->data.assignment.var_name, one);
+    set_variable(vars, ast_tree->data.assignment.var_name, one,
+                 ast_tree->data.assignment.is_const);
     return one;
 
   case NODE_IF:

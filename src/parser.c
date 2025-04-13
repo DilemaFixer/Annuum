@@ -136,6 +136,8 @@ TokenType get_token_type(const char *str) {
       return TOKEN_LOOP_NEXT;
   if(is_keyword(str, "stop"))
       return TOKEN_LOOP_STOP;
+  if(is_keyword(str , "const"))
+      return TOKEN_CONST;
 
   if (is_keyword(str, "+"))
     return TOKEN_PLUS;

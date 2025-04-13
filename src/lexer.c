@@ -1,8 +1,7 @@
 #include "lexer.h"
-#include "arr.h"
-#include "lexer.h"
 #include "logger.h"
 #include "parser.h"
+#include <stdio.h>
 #include <string.h>
 
 ast_node *new_loop_stop_node() {
@@ -51,7 +50,7 @@ ast_node *new_binary_node(ast_node *left, ast_node *right, TokenType type) {
   return node;
 }
 
-ast_node *new_variable_node(const char *name) {
+ast_node *new_variable_node(const char *name, bool is_const) {
   if (!name)
     elog("Can't create new variable ast node with null ptr on it name");
   if (*name == '\0')
@@ -62,12 +61,14 @@ ast_node *new_variable_node(const char *name) {
     elog("Error allocation memory for ast node (variable type)");
 
   node->type = NODE_VARIABLE;
-  node->data.var_name = strdup(name);
+  node->data.var.var_name = strdup(name);
+  node->data.var.is_const = is_const;
 
   return node;
 }
 
-ast_node *new_assignment_node(const char *var_name, ast_node *value) {
+ast_node *new_assignment_node(const char *var_name, ast_node *value,
+                              bool is_const) {
   if (!var_name)
     elog("Can't create assigment ast node with null ptr on var name");
   if (*var_name == '\0')
@@ -82,6 +83,7 @@ ast_node *new_assignment_node(const char *var_name, ast_node *value) {
   node->type = NODE_ASSIGNMENT;
   node->data.assignment.var_name = strdup(var_name);
   node->data.assignment.value = value;
+  node->data.assignment.is_const = is_const;
 
   return node;
 }
@@ -165,7 +167,7 @@ void free_ast(ast_node *node) {
     free_ast(node->data.assignment.value);
     break;
   case NODE_VARIABLE:
-    free(node->data.var_name);
+    free(node->data.var.var_name);
     break;
   case NODE_IF:
     free_ast(node->data.if_stmt.condition);
@@ -351,7 +353,7 @@ void print_ast(ast_node *node, int indent) {
     break;
 
   case NODE_VARIABLE:
-    printf("VARIABLE: %s\n", node->data.var_name);
+    printf("VARIABLE: %s\n", node->data.var.var_name);
     break;
 
   case NODE_ASSIGNMENT:
@@ -486,6 +488,34 @@ ast_node *parse_statement(lexer_t *lexer) {
     return new_loop_next_node();
   }
 
+  if (lexer->current->type == TOKEN_CONST) {
+
+    lexer_one_skip(lexer);
+
+    if (lexer->current->type != TOKEN_IDENTIFIER) {
+      lexer_syntax_error(lexer, "after 'const' must go var identifire \n");
+    }
+
+    if (lexer->current->type == TOKEN_IDENTIFIER) {
+      const char *var_name = lexer->current->value.string;
+      lexer_one_skip(lexer);
+      if (lexer->current->type != TOKEN_ASSIGN)
+        elog("Syntax error : %zu:%zu expected '=' after identifier in "
+             "assignment",
+             lexer->current->line, lexer->current->offset);
+
+      lexer_one_skip(lexer);
+      ast_node *expression = parse_expression(lexer);
+
+      if (lexer->current->type != TOKEN_SEMICOLON)
+        elog("Syntax error : %zu:%zu expected ';' after expression",
+             lexer->current->line, lexer->current->offset);
+
+      lexer_one_skip(lexer);
+      return new_assignment_node(var_name, expression, true);
+    }
+  }
+
   if (lexer->current->type == TOKEN_IDENTIFIER) {
     const char *var_name = lexer->current->value.string;
     lexer_one_skip(lexer);
@@ -501,7 +531,7 @@ ast_node *parse_statement(lexer_t *lexer) {
            lexer->current->line, lexer->current->offset);
 
     lexer_one_skip(lexer);
-    return new_assignment_node(var_name, expression);
+    return new_assignment_node(var_name, expression, false);
   }
 
   if (lexer->current->type == TOKEN_IF) {
@@ -676,10 +706,16 @@ ast_node *parse_factor(lexer_t *lexer) {
     return new_number_node(value);
   }
 
+  if (lexer->current->type == TOKEN_CONST) {
+    if (lexer->current->type == TOKEN_IDENTIFIER) {
+      lexer_syntax_error(lexer, "Can't create const var with no assigment");
+    }
+  }
+
   if (lexer->current->type == TOKEN_IDENTIFIER) {
     const char *var_name = lexer->current->value.string;
     lexer_one_skip(lexer);
-    return new_variable_node(var_name);
+    return new_variable_node(var_name, false);
   }
 
   if (lexer->current->type == TOKEN_LPAREN) {

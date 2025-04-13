@@ -7,6 +7,7 @@ typedef enum {
     TOKEN_EOF = 0,     // Конец файла
     TOKEN_NUMBER,      // Число (123, 42.5)
     TOKEN_IDENTIFIER,  // Идентификатор (переменная)
+    TOKEN_CONST,       // Константа (const)
     TOKEN_ASSIGN,      // Присваивание (=)
     TOKEN_PLUS,        // Сложение (+)
     TOKEN_MINUS,       // Вычитание (-)

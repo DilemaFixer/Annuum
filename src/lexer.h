@@ -4,6 +4,7 @@
 #include "arr.h"
 #include "parser.h"
 #include <stdbool.h>
+#include <stdbool.h>
 
 typedef enum ast_type {
     NODE_NUMBER,
@@ -23,7 +24,11 @@ typedef struct ast_node {
     ast_type type;
     union {
         double value;
-        char* var_name;
+
+        struct {
+            char* var_name;
+            bool is_const;
+        } var;
 
         struct {
             struct ast_node* left;
@@ -32,6 +37,7 @@ typedef struct ast_node {
         } binary;
 
         struct {
+            bool is_const;
             char* var_name;
             struct ast_node* value;
         } assignment;
@@ -67,8 +73,8 @@ void print_ast(ast_node *node, int indent);
 
 ast_node *new_number_node(double value);
 ast_node *new_binary_node(ast_node *left, ast_node *right, TokenType type);
-ast_node *new_variable_node(const char *name);
-ast_node *new_assignment_node(const char *var_name, ast_node *value);
+ast_node *new_variable_node(const char *name , bool is_const);
+ast_node *new_assignment_node(const char *var_name, ast_node *value , bool is_const);
 ast_node *new_if_node(ast_node *condition, ast_node *if_body, ast_node *else_body);
 ast_node *new_print_node(ast_node *expression);
 ast_node *new_block_node(arr_t *statements);
