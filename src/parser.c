@@ -94,21 +94,27 @@ bool is_number(const char *str) {
   if (!str || !*str)
     return false;
 
-  if (!isdigit(*str) && (*str != '.' || !isdigit(*(str + 1)))) {
-    return false;
-  }
+  bool has_minus = (*str == '-');
+  const char *p = str;
 
-  bool has_decimal = (*str == '.');
-  for (const char *p = str + 1; *p; p++) {
-    if (*p == '.') {
-      if (has_decimal)
-        return false;
+  if (has_minus)
+    p++;
+
+  if (!*p)
+    return false;
+
+  bool has_decimal = false;
+
+  while (*p) {
+    if (isdigit(*p)) {
+      p++;
+    } else if (*p == '.' && !has_decimal) {
       has_decimal = true;
-    } else if (!isdigit(*p)) {
+      p++;
+    } else {
       return false;
     }
   }
-
   return true;
 }
 
@@ -130,14 +136,14 @@ TokenType get_token_type(const char *str) {
     return TOKEN_ELSE;
   if (is_keyword(str, "print"))
     return TOKEN_PRINT;
-  if(is_keyword(str, "loop"))
+  if (is_keyword(str, "loop"))
     return TOKEN_LOOP;
-  if(is_keyword(str, "next"))
-      return TOKEN_LOOP_NEXT;
-  if(is_keyword(str, "stop"))
-      return TOKEN_LOOP_STOP;
-  if(is_keyword(str , "const"))
-      return TOKEN_CONST;
+  if (is_keyword(str, "next"))
+    return TOKEN_LOOP_NEXT;
+  if (is_keyword(str, "stop"))
+    return TOKEN_LOOP_STOP;
+  if (is_keyword(str, "const"))
+    return TOKEN_CONST;
 
   if (is_keyword(str, "+"))
     return TOKEN_PLUS;
@@ -180,10 +186,14 @@ char *extract_word(const char *str, size_t *length) {
   if (!str)
     return NULL;
 
-  bool is_ssymbol = is_system_symbol(*str);
   *length = 0;
+  bool is_ssymbol = is_system_symbol(*str);
 
-  if (is_ssymbol) {
+  bool potential_negative_number =
+      (*str == '-' && (isdigit(*(str + 1)) || *(str + 1) == '.'));
+  bool potential_decimal_point = (*str == '.' && isdigit(*(str + 1)));
+
+  if (is_ssymbol && !potential_negative_number && !potential_decimal_point) {
     if ((*str == '=' && *(str + 1) == '=') ||
         (*str == '<' && *(str + 1) == '=') ||
         (*str == '>' && *(str + 1) == '=') ||
@@ -193,8 +203,22 @@ char *extract_word(const char *str, size_t *length) {
       *length = 1;
     }
   } else {
-    while (str[*length] && !isspace(str[*length]) &&
-           !is_system_symbol(str[*length])) {
+    bool is_potential_number =
+        isdigit(*str) || potential_negative_number || potential_decimal_point;
+
+    while (str[*length] && !isspace(str[*length])) {
+      if (is_system_symbol(str[*length])) {
+        if (is_potential_number && str[*length] == '.' && str[*length + 1] &&
+            isdigit(str[*length + 1])) {
+          (*length)++;
+          continue;
+        }
+        if (*length == 0 && potential_negative_number) {
+          (*length)++;
+          continue;
+        }
+        break;
+      }
       (*length)++;
     }
   }

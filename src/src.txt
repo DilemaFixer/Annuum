@@ -1,6 +1,6 @@
-const PI = 3;
+const PI = 3.14;
 // Calculate factorial of 5 using loop
-PI = 8;
+PI = -8;
 print(PI);
 
 n = 10;
