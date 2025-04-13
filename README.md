@@ -3,14 +3,17 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Language](https://img.shields.io/badge/language-C-orange.svg)
 ![Status](https://img.shields.io/badge/status-experimental-green.svg)
+![Platform](https://img.shields.io/badge/platform-UNIX_only-red.svg)
 
-Annuum is a simple interpreter for a custom scripting language. It provides basic functionality for arithmetic operations, variable assignments, conditional statements, and printing values to the console.
+Annuum is a simple interpreter for a custom scripting language with mathematical focus. It provides functionality for arithmetic operations, variable assignments, conditional statements, loops, and printing values to the console.
 
 ## ✨ Features
 
 - 📝 Simple syntax inspired by JavaScript/C
 - 🔢 Support for numeric variables and operations
-- 🔀 Basic control flow with if/else statements
+- 🔀 Control flow with if/else statements and loops
+- 🔄 Loop constructs with `stop` and `next` operators
+- 🔒 Constant variable declarations with `const`
 - 🖨️ Print function for output
 - 🐛 Comprehensive error reporting
 
@@ -20,6 +23,7 @@ Annuum is a simple interpreter for a custom scripting language. It provides basi
 
 - GCC compiler
 - Unix-like environment (Linux or macOS)
+- **Note**: This project is designed exclusively for Unix-like systems due to Cbuilder dependencies
 
 ### Build Process
 
@@ -45,14 +49,6 @@ This will create an executable called `anum` in the current directory.
 
 By default, it will look for a script file at `/Users/UserName/Documents/GitHub/Annuum/src/src.txt`. You may need to modify the path in `main.c` to point to your script file.
 
-### ⚠️ Windows Compatibility
-
-The project is primarily designed for Unix-like systems. It may require modifications to work on Windows due to:
-
-- Path handling differences
-- Directory separator differences
-- Some system-specific headers/functions
-
 ## 📚 Language Syntax
 
 ### Variables
@@ -63,6 +59,15 @@ Variables are dynamically typed and store numeric values:
 a = 5;
 b = 10;
 c = a + b * 2;
+```
+
+### Constants
+
+Declare constants that cannot be modified:
+
+```
+const PI = 3.14;
+const GRAVITY = 9.8;
 ```
 
 ### Arithmetic Operations
@@ -103,6 +108,20 @@ Supported comparison operators:
 - Greater than or equal to: `>=`
 - Less than or equal to: `<=`
 
+### Loops
+
+Loop statements for repetitive execution:
+
+```
+loop (condition) {
+    // code executed while condition is true
+}
+```
+
+Loop control operators:
+- `stop` - breaks out of the loop
+- `next` - skips to the next iteration
+
 ### Code Blocks
 
 Use curly braces to group statements:
@@ -124,32 +143,49 @@ Single-line comments start with `//`:
 a = 5; // This is also a comment
 ```
 
-## 📝 Example Program
+## 📝 Example Programs
+
+### Factorial Calculation
 
 ```
-// Calculate factorial of a small number
+// Calculate factorial of 5
 n = 5;
 factorial = 1;
 i = 1;
 
-if (i <= n) {
+loop(i <= n) {
     factorial = factorial * i;
     i = i + 1;
-    
-    if (i <= n) {
-        factorial = factorial * i;
-        i = i + 1;
-    }
 }
 
-print(factorial);
+print(factorial);  // Output: 120
 ```
 
-When you run this program, the output will be:
+### Using Loop Control
+
 ```
-2
+// Print factorials until they exceed 100
+n = 10;
+factorial = 1;
+i = 1;
+loop(i <= n) {
+    factorial = factorial * i;
+    i = i + 1;
+    if(factorial > 100){
+        stop;  // Break out of the loop
+    }
+    print(factorial);
+}
 ```
-Note: This is not the complete factorial of 5 (which would be 120) because the implementation only processes the first two iterations.
+
+### Using Constants
+
+```
+const PI = 3.14;
+radius = 5;
+area = PI * radius * radius;
+print(area);  // Output: 78.5
+```
 
 ## ⚡ Run Your Own Code
 
@@ -166,9 +202,7 @@ Then rebuild and run the interpreter.
 - Only supports numeric values (floating-point)
 - No string support
 - No arrays or complex data structures
-- Limited control flow (no loops, only if/else)
-- No functions or procedures beyond the built-in `print`
-- Limited factorial calculation in the example (only handles the first two multiplications)
+- Limited standard library functions
 
 ## 📂 Project Structure
 
@@ -178,19 +212,19 @@ Then rebuild and run the interpreter.
 - `src/interpreter.c` & `src/interpreter.h`: Interpreter for the AST
 - `src/logger.c` & `src/logger.h`: Logging utilities
 - `src/main.c`: Entry point
-- `b.c` & `b.h`: Custom build system
+- `b.c` & `b.h`: Custom build system (Cbuilder)
 
 ## 🔨 Builder
 
-The project uses a custom builder from [Cbuilder](https://github.com/DilemaFixer/Cbuilder).
+The project uses Cbuilder, a custom build system designed for Unix-like environments only.
 
 ## 📋 Development Roadmap
 
-- [ ] Add support for loops
-- [ ] Implement functions
-- [ ] Expand standard math library
-
-
+- [ ] Add standard math functions (sin, cos, sqrt, etc.)
+- [ ] Implement function definitions
+- [ ] Add support for strings
+- [ ] Create a standard library
+- [ ] Improve error messages and debugging
 
 <div align="center">
   <p>Made with ❤️ by <a href="https://github.com/DilemaFixer">DilemaFixer</a></p>
