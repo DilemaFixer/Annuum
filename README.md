@@ -220,11 +220,9 @@ The project uses Cbuilder, a custom build system designed for Unix-like environm
 
 ## 📋 Development Roadmap
 
-- [ ] Add standard math functions (sin, cos, sqrt, etc.)
 - [ ] Implement function definitions
-- [ ] Add support for strings
 - [ ] Create a standard library
-- [ ] Improve error messages and debugging
+- [ ] Add module system
 
 <div align="center">
   <p>Made with ❤️ by <a href="https://github.com/DilemaFixer">DilemaFixer</a></p>
