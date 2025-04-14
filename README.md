@@ -5,7 +5,7 @@
 ![Status](https://img.shields.io/badge/status-experimental-green.svg)
 ![Platform](https://img.shields.io/badge/platform-UNIX_only-red.svg)
 
-Annuum is a simple interpreter for a custom scripting language with mathematical focus. It provides functionality for arithmetic operations, variable assignments, conditional statements, loops, and printing values to the console.
+Annuum is a simple interpreter for a custom scripting language with mathematical focus. It provides functionality for arithmetic operations, variable assignments, conditional statements, loops, function definitions, and printing values to the console.
 
 ## ✨ Features
 
@@ -15,6 +15,8 @@ Annuum is a simple interpreter for a custom scripting language with mathematical
 - 🔄 Loop constructs with `stop` and `next` operators
 - 🔒 Constant variable declarations with `const`
 - 🖨️ Print function for output
+- 📊 Function definitions and calls
+- 🔙 Return statements
 - 🐛 Comprehensive error reporting
 
 ## 🛠️ Building and Running
@@ -122,6 +124,32 @@ Loop control operators:
 - `stop` - breaks out of the loop
 - `next` - skips to the next iteration
 
+### Function Definitions
+
+Define functions using two different syntaxes:
+
+1. Block syntax for multi-statement functions:
+```
+fn function_name(param1, param2, ...) {
+    // function body
+    // multiple statements
+    return value;  // optional
+}
+```
+
+2. Arrow syntax for single-expression functions:
+```
+fn function_name(param1, param2, ...) -> expression;
+```
+
+### Function Calls
+
+Call functions and use their return values:
+
+```
+result = function_name(arg1, arg2, ...);
+```
+
 ### Code Blocks
 
 Use curly braces to group statements:
@@ -145,20 +173,46 @@ a = 5; // This is also a comment
 
 ## 📝 Example Programs
 
+### Function Definition and Usage
+
+```
+// Define a function that calculates volume of a cylinder
+fn cylinder_volume(radius, height) {
+    const PI = 3.14;
+    return PI * radius * radius * height;
+}
+
+// Call the function
+r = 5;
+h = 10;
+volume = cylinder_volume(r, h);
+print(volume);  // Output: 785.0
+```
+
+### Arrow Function Syntax
+
+```
+// Define a function to calculate area using arrow syntax
+fn circle_area(radius) -> 3.14 * radius * radius;
+
+// Use the function
+area = circle_area(5);
+print(area);  // Output: 78.5
+```
+
 ### Factorial Calculation
 
 ```
 // Calculate factorial of 5
-n = 5;
-factorial = 1;
-i = 1;
-
-loop(i <= n) {
-    factorial = factorial * i;
-    i = i + 1;
+fn factorial(n) {
+    if (n <= 1) {
+        return 1;
+    } else {
+        return n * factorial(n - 1);
+    }
 }
 
-print(factorial);  // Output: 120
+print(factorial(5));  // Output: 120
 ```
 
 ### Using Loop Control
@@ -178,15 +232,6 @@ loop(i <= n) {
 }
 ```
 
-### Using Constants
-
-```
-const PI = 3.14;
-radius = 5;
-area = PI * radius * radius;
-print(area);  // Output: 78.5
-```
-
 ## ⚡ Run Your Own Code
 
 To run your own code, save it to a file and update the file path in `src/main.c`:
@@ -203,6 +248,7 @@ Then rebuild and run the interpreter.
 - No string support
 - No arrays or complex data structures
 - Limited standard library functions
+- No closures or higher-order functions
 
 ## 📂 Project Structure
 
@@ -216,13 +262,17 @@ Then rebuild and run the interpreter.
 
 ## 🔨 Builder
 
-The project uses Cbuilder, a custom build system designed for Unix-like environments only.
+The project uses Cbuilder, a custom build system designed for Unix-like environments only. This is why the project will not work on Windows systems without additional compatibility layers.
 
 ## 📋 Development Roadmap
 
-- [ ] Implement function definitions
+- [x] Implement function definitions
+- [ ] Add support for string types
 - [ ] Create a standard library
 - [ ] Add module system
+- [ ] Implement closures and higher-order functions
+- [ ] Add error handling mechanisms (try/catch)
+- [ ] Add support for composite data types (arrays, objects)
 
 <div align="center">
   <p>Made with ❤️ by <a href="https://github.com/DilemaFixer">DilemaFixer</a></p>
