@@ -264,16 +264,6 @@ Then rebuild and run the interpreter.
 
 The project uses Cbuilder, a custom build system designed for Unix-like environments only. This is why the project will not work on Windows systems without additional compatibility layers.
 
-## 📋 Development Roadmap
-
-- [x] Implement function definitions
-- [ ] Add support for string types
-- [ ] Create a standard library
-- [ ] Add module system
-- [ ] Implement closures and higher-order functions
-- [ ] Add error handling mechanisms (try/catch)
-- [ ] Add support for composite data types (arrays, objects)
-
 <div align="center">
   <p>Made with ❤️ by <a href="https://github.com/DilemaFixer">DilemaFixer</a></p>
 </div>
